@@ -8,58 +8,49 @@
 //=====================================
 
 public class ProposalID {
+    private int proposalID;
+    private int value;
 
-    private int number;
-    private final String uid;
-
-    public ProposalID(int number, String uid) {
-        this.number = number;
-        this.uid    = uid;
+    public ProposalID(int proposalID) {
+        this.proposalID = proposalID;
+        this.value = 0;
     }
 
-    public int getNumber() {
-        return number;
+    public ProposalID(int proposalID, int value) {
+        this.proposalID = proposalID;
+        this.value = value;
     }
 
-    public void setNumber(int number) {
-        this.number = number;
+    public int getProposalID() {
+        return proposalID;
     }
 
-    public void incrementNumber() {
-        this.number += 1;
+    public void setProposalID(int proposalID) {
+        this.proposalID = proposalID;
     }
 
-    public String getUID() {
-        return uid;
+    public int getValue() {
+        return value;
     }
 
-    public int compare( ProposalID id ) {
-        if ( equals(id) )
-            return 0;
-        if ( number < id.number || (number == id.number && uid.compareTo(id.uid) < 0) )
-            return -1;
-        return 1;
+    public void setValue(int value) {
+       this.value = value;
     }
-    
+
+    public void incrementProposalID() {
+        this.proposalID += Math.random()*10;
+    } // todo random increment proposalID
 
     public boolean isGreaterThan( ProposalID id ) {
-        return compare(id) > 0;
+        return proposalID > id.proposalID;
     }
 
     public boolean isLessThan( ProposalID id ) {
-        return compare(id) < 0;
+        return proposalID < id.proposalID;
     }
 
     @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + number;
-        result = prime * result + ((uid == null) ? 0 : uid.hashCode());
-        return result;
-    }
-
-    @Override
+    // todo check
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
@@ -68,13 +59,10 @@ public class ProposalID {
         if (getClass() != obj.getClass())
             return false;
         ProposalID other = (ProposalID) obj;
-        if (number != other.number)
+        if (proposalID != other.proposalID)
             return false;
-        if (uid == null) {
-            if (other.uid != null)
-                return false;
-        } else if (!uid.equals(other.uid))
-            return false;
-        return true;
+        if (value <= 0) {
+            return other.value <= 0;
+        } else return value == other.value;
     }
 }

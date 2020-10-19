@@ -6,37 +6,34 @@
 // Year: 2020
 // Assignment3: Paxos
 //=====================================
+import java.io.IOException;
 import java.util.*;
-import java.io.*;
 
 public class Election {
     protected final int councilSize = 9;
-    protected final int majority = (int) councilSize/2 + 1;
+    protected final int majority = councilSize/2 + 1;
     protected static Member M1, M2, M3, M4, M5, M6, M7, M8, M9;
-    protected static final String ip = "0.0.0.0";
-
-    protected final List<Member> council = new ArrayList<>();//Define a voters collection
-    protected final List<Member> proposers = new ArrayList<>();//Define a proposers collection
+    protected List<Member> council = new ArrayList<>();//Define a voters collection
+    protected List<Member> proposers = new ArrayList<>();//Define a proposers collection
 
 
     //Start all servers
-    public void start(int serverNumber) throws Exception {
-        System.out.println("==========Start Council Election==========");
+    public void start() throws Exception {
         if (council != null && council.size() >0)
             throw new Exception("restart error");
+        createMembers();
+        startElection();
     }
 
     //Started server registration
-    public void register(Member a_member) {
-        council.add(a_member);
+    public void register(Member member) {
+        council.add(member);
+        if (member == M1 || member == M2 || member == M3) {
+            proposers.add(member);
+        }
     }
 
-    //Get all servers
-    public int getMajority() {
-        return council.size()/2+1;
-    }
-
-    public void startProposers(){
+    public void createMembers(){
         M1 = new Member(1);
         M2 = new Member(2);
         M3 = new Member(3);
@@ -46,63 +43,80 @@ public class Election {
         M7 = new Member(7);
         M8 = new Member(8);
         M9 = new Member(9);
+        register(M1);
+        register(M2);
+        register(M3);
+        register(M4);
+        register(M5);
+        register(M6);
+        register(M7);
+        register(M8);
+        register(M9);
     }
-    //Create a legal Election Council
+    //Create a legal Election Council with 9 members
     public synchronized void startElection() {
-        new Thread(()->{
-            M1.start(1111);
-            register(M1);
-        }).start();
-        new Thread(()->{
-            M2.start(2222);
-            register(M2);
-        }).start();
-        new Thread(()->{
-            M3.start(3333);
-            register(M3);
-        }).start();
-        new Thread(()->{
-            M4.start(4444);
-            register(M4);
-        }).start();
-        new Thread(()->{
-            M5.start(5555);
-            register(M5);
-        }).start();
-        new Thread(()->{
-            M6.start(6666);
-            register(M6);
-        }).start();
-        new Thread(()->{
-            M7.start(7777);
-            register(M7);
-        }).start();
-        new Thread(()->{
-            M8.start(8888);
-            register(M8);
-        }).start();
-        new Thread(()->{
-            M9.start(9999);
-            register(M9);
-        }).start();
+        System.out.println("<<<<<<<<<< Start Council Election >>>>>>>>");
+        new Thread(M1::connecting).start();
+        new Thread(M2::connecting).start();
+        new Thread(M3::connecting).start();
+        new Thread(M4::connecting).start();
+        new Thread(M5::connecting).start();
+        new Thread(M6::connecting).start();
+        new Thread(M7::connecting).start();
+        new Thread(M8::connecting).start();
+        new Thread(M9::connecting).start();
     }
 
-    //Get a legal collection with random order
-    public synchronized List<Member> startCouncil() {
-        List<Member> list = new ArrayList<>();
-        int count = 0;
-        int councilSize = council.size();  //9
-        int majority = getMajority();
+    protected void propose(Member a_member) throws InterruptedException {
+        Thread.sleep(2000);
+        new Thread(()->{
+            while(true){
+                try {
+                    // phrase 1 : prepare(n), receive promise
+                    System.out.println("Election:: proposal " + a_member.memberID );
+                    a_member.prepare();
 
-        Random random = new Random();
-        while(count < majority) {
-            int _random = Math.abs(random.nextInt(councilSize)); // Generate a random number 0~8
-            Member _member = council.get(_random);
-            if(!list.contains(_member)) {
-                list.add(_member);
-                count++;
+                    Thread.sleep(3000);
+                    // phrase 2 : accept(n, value)
+                    if(a_member.promiseCount >= majority){
+                        System.out.printf("Election:: %s has received majority promises\n", a_member.memberID);
+                        int value = (int) a_member.proposalID.getValue(); // todo
+                        a_member.accept(value);
+                        if (a_member.acceptCount>majority){
+                            System.out.printf("Election:: %s has received majority accepted\n", a_member.memberID);
+                            // todo
+                            a_member.sendAll();
+                            break;
+                        }
+                    } else {
+                        System.out.printf("Election:: %s increase Proposal ID\n", a_member.memberID);
+                        a_member.proposalID.incrementProposalID(); // increase proposal ID and retry prepare(n)
+                    }
+                } catch (InterruptedException | IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
             }
         }
-        return list;
+        ).start();
     }
+
+/*    // todo let member sent prepare request
+    private void prepare(Member member) {
+        Thread thread = new Thread(){
+            public synchronized void run(){
+                member.prepare();
+            }
+        };
+        thread.start();
+    }
+
+    //todo
+    private void commit(Member member, int value) {
+        Thread thread = new Thread(){
+            public synchronized void run(){
+                member.accept();
+            }
+        };
+        thread.start();
+    }*/
 }

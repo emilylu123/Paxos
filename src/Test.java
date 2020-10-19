@@ -7,13 +7,16 @@
 // Assignment3: Paxos
 //=====================================
 //
-public class Test {
-    public static void main(String[] args) {
+public class Test extends Election {
+    public static void main(String[] args) throws InterruptedException {
+
         Election election = new Election();
         try{
-            election.start(9);
+            election.start();
         }catch(Exception e) {
             e.printStackTrace();
         }
+
+        election.propose(M1);
     }
 }

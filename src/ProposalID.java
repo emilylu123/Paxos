@@ -9,16 +9,22 @@
 
 public class ProposalID {
     private int proposalID;
-    private int value;
+    private Object value;
+    private int UID;
 
-    public ProposalID(int proposalID) {
-        this.proposalID = proposalID;
-        this.value = 0;
+    public ProposalID(int UID) {
+        this.proposalID = 0;
+        this.UID = UID;
     }
 
     public ProposalID(int proposalID, int value) {
         this.proposalID = proposalID;
-        this.value = value;
+        this.UID = value;
+        if (value <= 3){
+            this.value = value;  // M1 M2 M3 always vote for itself
+        } else {
+            this.value = (int)(Math.random() * 3) + 1; // M4-M9 randomly choose value from [M1, M2, M3]
+        }
     }
 
     public int getProposalID() {
@@ -29,17 +35,26 @@ public class ProposalID {
         this.proposalID = proposalID;
     }
 
-    public int getValue() {
+    public Object getValue() {
         return value;
     }
 
-    public void setValue(int value) {
+    public void setValue(Object value) {
        this.value = value;
     }
 
-    public void incrementProposalID() {
-        this.proposalID += Math.random()*10;
-    } // todo random increment proposalID
+
+    public int getUID() {
+        return UID;
+    }
+
+    public void setUID(int UID) {
+        this.UID = UID;
+    }
+
+    public int incrementProposalID() {
+        return this.proposalID += Math.random()*10; // todo random increment proposalID
+    }
 
     public boolean isGreaterThan( ProposalID id ) {
         return proposalID > id.proposalID;
@@ -61,8 +76,8 @@ public class ProposalID {
         ProposalID other = (ProposalID) obj;
         if (proposalID != other.proposalID)
             return false;
-        if (value <= 0) {
-            return other.value <= 0;
-        } else return value == other.value;
+        if ((int)value <= 0) {  // todo check?
+            return (int)other.value <= 0;
+        } else return (int)value == (int)other.value;
     }
 }

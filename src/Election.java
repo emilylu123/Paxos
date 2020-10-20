@@ -8,6 +8,22 @@
 //=====================================
 import java.io.IOException;
 import java.util.*;
+/*10 points -  Paxos implementation works when two councillors send voting proposals at the same time
+
+30 points – Paxos implementation works in the case where all M1-M9 have immediate responses to voting queries
+
+30 points – Paxos implementation works when M1 – M9 have responses to voting queries suggested by the profiles above,
+including when M2 or M3 propose and then go offline
+
+20 points – Testing harness for the above scenarios + evidence that they work (in the form of printouts)
+
+10 points for the quality of your code:
+Bonus
+10 points – Paxos implementation works with a number ‘n’ of councilors with four profiles of response times:
+immediate;  medium; late; never
+50 points – (you can use these points in this assignment, or in any other subsequent assignment) –
+Fast Byzantine Paxos implementation that works when councilors lie, collude, or intentionally do not participate
+in some voting queries but participate in others.*/
 
 public class Election {
     protected final int councilSize = 9;
@@ -73,23 +89,23 @@ public class Election {
             while(true){
                 try {
                     // phrase 1 : prepare(n), receive promise
-                    System.out.println("Election:: proposal " + a_member.memberID );
+                    System.out.println("<<<<< Election:: run proposal M" + a_member.MID + ">>>>>\n");
                     a_member.prepare();
-
                     Thread.sleep(3000);
                     // phrase 2 : accept(n, value)
                     if(a_member.promiseCount >= majority){
-                        System.out.printf("Election:: %s has received majority promises\n", a_member.memberID);
+                        System.out.printf("\nElection:: M%s has received majority promises\n", a_member.MID);
                         int value = (int) a_member.proposalID.getValue(); // todo
-                        a_member.accept(value);
+//                        a_member.accept(value);
+                        a_member.accept();
                         if (a_member.acceptCount>majority){
-                            System.out.printf("Election:: %s has received majority accepted\n", a_member.memberID);
+                            System.out.printf("\nElection:: M%s has received majority accepted\n", a_member.MID);
                             // todo
                             a_member.sendAll();
                             break;
                         }
                     } else {
-                        System.out.printf("Election:: %s increase Proposal ID\n", a_member.memberID);
+                        System.out.printf("\nElection:: M%s increase Proposal ID\n", a_member.MID);
                         a_member.proposalID.incrementProposalID(); // increase proposal ID and retry prepare(n)
                     }
                 } catch (InterruptedException | IOException | ClassNotFoundException e) {
@@ -99,24 +115,4 @@ public class Election {
         }
         ).start();
     }
-
-/*    // todo let member sent prepare request
-    private void prepare(Member member) {
-        Thread thread = new Thread(){
-            public synchronized void run(){
-                member.prepare();
-            }
-        };
-        thread.start();
-    }
-
-    //todo
-    private void commit(Member member, int value) {
-        Thread thread = new Thread(){
-            public synchronized void run(){
-                member.accept();
-            }
-        };
-        thread.start();
-    }*/
 }

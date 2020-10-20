@@ -7,14 +7,16 @@
 // Assignment3: Paxos
 //=====================================
 
-public class ProposalID {
+import java.io.Serializable;
+
+public class ProposalID implements Serializable {
     private int proposalID;
     private Object value;
     private int UID;
 
     public ProposalID(int UID) {
-        this.proposalID = 0;
         this.UID = UID;
+        this.proposalID = UID;
     }
 
     public ProposalID(int proposalID, int value) {
@@ -26,7 +28,12 @@ public class ProposalID {
             this.value = (int)(Math.random() * 3) + 1; // M4-M9 randomly choose value from [M1, M2, M3]
         }
     }
-
+    public void printPID (){
+        System.out.printf(" (%d, %d) ", this.getProposalID(), (int)this.getValue());
+    }
+    public String getPID (){
+        return "( " + this.getProposalID() + ", " + this.getValue() + " )";
+    }
     public int getProposalID() {
         return proposalID;
     }
@@ -67,17 +74,19 @@ public class ProposalID {
     @Override
     // todo check
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+
         ProposalID other = (ProposalID) obj;
-        if (proposalID != other.proposalID)
-            return false;
-        if ((int)value <= 0) {  // todo check?
-            return (int)other.value <= 0;
-        } else return (int)value == (int)other.value;
+        if(UID!=other.UID) return false;
+        if (proposalID != other.proposalID)  return false;
+        if (value == null){
+            if (other.value != null)  return false;
+        } else {
+            if (other.value == null) return false;
+            else if ((int)value != (int)other.value) return false;
+        }
+        return true;
     }
 }

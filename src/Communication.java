@@ -56,18 +56,18 @@ public class Communication {
         ObjectOutputStream oos = getOOS(socket);
         oos.writeObject(outOBJ);
         oos.flush();
-        ProposalID pid = (ProposalID) outOBJ;
-        System.out.printf(">> MSG out:: -> M%s: %s\n",toMID, pid.getPID());
+        ProposalMSG pid = (ProposalMSG) outOBJ;
+        System.out.printf(">> MSG out:: -> M%s: %s\n",toMID, pid.getProposalMSG());
         return true;
     }
 
-    public static ProposalID inMSG(int fromMID) throws InterruptedException, IOException, ClassNotFoundException {
+    public static ProposalMSG inMSG(int fromMID) throws InterruptedException, IOException, ClassNotFoundException {
         Socket socket = getSocket(fromMID);
         ObjectInputStream ois = getOIS(socket);
-        ProposalID inPID = null;
+        ProposalMSG inPID = null;
         try {
-            inPID = (ProposalID) ois.readObject();
-            System.out.printf(">> MSG in:: M%s -> : %s\n",fromMID, inPID.getPID());
+            inPID = (ProposalMSG) ois.readObject();
+            System.out.printf(">> MSG in:: M%s -> : %s\n",fromMID, inPID.getProposalMSG());
         } catch(Exception e){
             System.out.println("Error in receiving in message");
             e.printStackTrace();

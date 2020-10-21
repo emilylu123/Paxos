@@ -7,7 +7,7 @@
 // Assignment3: Paxos
 //=====================================
 //
-public class Test extends Election {
+ public class MultiCouncillorsTest extends Election{
     public static void main(String[] args) throws InterruptedException {
 
         Election election = new Election();
@@ -18,5 +18,6 @@ public class Test extends Election {
         }
 
         election.propose(M1);
+        election.propose(M3);
     }
 }

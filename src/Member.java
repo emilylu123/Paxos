@@ -19,29 +19,29 @@ public class Member extends Communication{
     protected final String backupPath = "backup.txt";
     protected final int councilSize = 9;
     protected final int majority = councilSize/2 + 1;
-    protected ProposalID proposalID = null; //p
+    protected ProposalMSG proposalID = null; //p
 //    protected Object proposedValue = null; //p
-    protected ProposalID lastAcceptedID = null; //p
+    protected ProposalMSG lastAcceptedID = null; //p
     protected HashSet<String> promisesReceived = new HashSet<>(); //p
     protected int acceptCount = 0;
     protected int promiseCount = 0;
     protected int retentionCount;
     protected int maxProposalID = -1;
     protected Object acceptedValue; //a
-    protected ProposalID promisedID; //a
-    protected ProposalID acceptedID; //a
+    protected ProposalMSG promisedID; //a
+    protected ProposalMSG acceptedID; //a
     protected Object finalValue = null; //l
-    protected ProposalID finalProposalID = null; //l
-    protected HashMap<ProposalID, Member> proposals = new HashMap<>();  //l
-    protected HashMap<String,  ProposalID> acceptors = new HashMap<>();  //l
+    protected ProposalMSG finalProposalID = null; //l
+    protected HashMap<ProposalMSG, Member> proposals = new HashMap<>();  //l
+    protected HashMap<String, ProposalMSG> acceptors = new HashMap<>();  //l
     protected boolean isOffline = false;
 
     // M1, M2, M3 will proposal for themselves, M4-M9 will randomly choose one from M1-M3 as proposal value
     Member(int MID){
         this.MID = MID;
         this.localport = MID * 1111;  // number * 1111
-        this.proposalID = new ProposalID(MID);
-//        this.proposalID = new ProposalID(0, MID);
+        this.proposalID = new ProposalMSG(MID);  // set PID = 0
+//        this.proposalID = new ProposalMSG(MID,true);
     }
 
     Member(int acceptCount, int retentionCount,Object acceptedValue){
@@ -81,7 +81,7 @@ public class Member extends Communication{
     public void prepare() throws IOException, InterruptedException, ClassNotFoundException {
         promisesReceived.clear();  // clear all promises that have received with earlier proposal(s)
         proposalID.incrementProposalID();
-        System.out.println( "<<<<< Phrase 1a >>>>>  M" + this.MID + " :: sent Prepare(" + this.proposalID.getProposalID() + ") to all");
+        System.out.println( "<<<<< Phrase 1a >>>>>  M" + this.MID + " :: sent Prepare(" + this.proposalID.getProposalMSG() + ") to all");
         // send prepare to all other members
         for (int i = 1; i <= councilSize; i++) {
             if ( i != this.MID) sendPrepare(i);  // send prepare(n) to M(i) except itself
@@ -93,7 +93,7 @@ public class Member extends Communication{
     // sending prepare (pID) to the assigned one Member(ID)
     public void sendPrepare(int acceptorMID) throws InterruptedException, IOException, ClassNotFoundException {
         outMSG(acceptorMID, this.proposalID);
-//        ProposalID inPID = inMSG(acceptorMID);
+//        ProposalMSG inPID = inMSG(acceptorMID);
 //        receivePromise(acceptorMID, this.proposalID, inPID);
     }
 
@@ -103,9 +103,9 @@ public class Member extends Communication{
      if proposalID > max, reply accepted ID and accepted value
      otherwise ignore this prepare message
      */
-    public void receivePrepare(int fromMID, ProposalID proposalID) throws InterruptedException, IOException, ClassNotFoundException {
+    public void receivePrepare(int fromMID, ProposalMSG proposalID) throws InterruptedException, IOException, ClassNotFoundException {
         System.out.printf(">> (Acceptor) M%s  :: Receive Prepare (%d) from M%d\n",this.MID,
-                proposalID.getProposalID(), fromMID);
+                proposalID.getProposalMSG(), fromMID);
         // duplicate message
         if (this.promisedID != null && proposalID.equals(promisedID)) {
             sendPromise(fromMID, proposalID, acceptedID, acceptedValue);
@@ -116,19 +116,19 @@ public class Member extends Communication{
     }
 
     // 1b send promise to proposerUID
-    public void sendPromise(int proposerUID, ProposalID proposalID, ProposalID previousID, Object acceptedValue) throws InterruptedException, IOException, ClassNotFoundException {
+    public void sendPromise(int proposerUID, ProposalMSG proposalID, ProposalMSG previousID, Object acceptedValue) throws InterruptedException, IOException, ClassNotFoundException {
         System.out.printf("\n<<<<< Phrase 1b >>>>>  M%s :: send Promise (%s) to M%d\n",this.MID ,
-                proposalID.getProposalID(), proposerUID);
+                proposalID.getProposalMSG(), proposerUID);
         outMSG(proposerUID,proposalID);
-//        ProposalID inPID = inMSG(proposerUID);
+//        ProposalMSG inPID = inMSG(proposerUID);
     }
 
 
     /* phrase 2a : If a Proposer receives a majority of Promises from Acceptors,
      * it will set value to its proposal and send an Accept message (pid, V).
      */
-    public void receivePromise( int fromMID, ProposalID proposalID, ProposalID prevAcceptedID){
-        System.out.printf(">> M%d:: Receive Promise %s from M%d\n", this.MID, proposalID.getPID() ,fromMID);
+    public void receivePromise(int fromMID, ProposalMSG proposalID, ProposalMSG prevAcceptedID){
+        System.out.printf(">> M%d:: Receive Promise %s from M%d\n", this.MID, proposalID.getProposalMSG() ,fromMID);
         Object prevAcceptedValue = prevAcceptedID.getValue();
         // return if receives from itself or already received
         if ( !proposalID.equals(this.proposalID) || promisesReceived.contains(String.valueOf(fromMID)) )
@@ -157,13 +157,13 @@ public class Member extends Communication{
     protected synchronized void accept(Socket a_member_socket) throws IOException, ClassNotFoundException {
         System.out.println("<<<<<<<<<< M" + this.MID + " Start Accept >>>>>>>>>>    " + a_member_socket.toString());
         ObjectInputStream ois;
-        ProposalID inPID;
+        ProposalMSG inPID;
         try {
             ois = new ObjectInputStream(a_member_socket.getInputStream());
-            inPID= (ProposalID) ois.readObject();
+            inPID= (ProposalMSG) ois.readObject();
             Object v = inPID.getValue();
-            int p = inPID.getProposalID();
-            int fromMID = inPID.getUID();
+            int p = inPID.getPID();
+            int fromMID = inPID.getMID();
 //            System.out.printf(">> M%s (Acceptor) :: Receive (%d, %s) from M%d\n", this.MID, p, v, fromMID);
             if (v != null) {
                 receiveAccept(fromMID,inPID);
@@ -181,7 +181,7 @@ public class Member extends Communication{
     * if acceptPID = maxPID = n, accept value = value , save to local backup, return
     * todo? otherwise return maxPID
     */
-    public void receiveAccept(int fromMID, ProposalID proposalID) {
+    public void receiveAccept(int fromMID, ProposalMSG proposalID) {
         System.out.println(">> receive Accept");
         Object value = proposalID.getValue();
         if (promisedID == null || proposalID.isGreaterThan(promisedID) || proposalID.equals(promisedID)) {
@@ -194,12 +194,12 @@ public class Member extends Communication{
     }
 
 //    @Override
-    public void receiveAccepted(int fromMID, ProposalID proposalID, Object acceptedValue) {
+    public void receiveAccepted(int fromMID, ProposalMSG proposalID, Object acceptedValue) {
         System.out.println("in receive Accepted");
         if (isComplete())
             return;
 
-        ProposalID oldMID = acceptors.get(fromMID);
+        ProposalMSG oldMID = acceptors.get(fromMID);
 
         if (oldMID != null && !proposalID.isGreaterThan(oldMID))
             return;
@@ -230,19 +230,19 @@ public class Member extends Communication{
         }
     }
 
-    private void onResolution(ProposalID proposalID, Object acceptedValue) {
+    private void onResolution(ProposalMSG proposalID, Object acceptedValue) {
         System.out.println("in on Resolution (todo)");
         // todo
     }
 
     // 2a
-    public void sendAccept(ProposalID proposalID, Object proposalValue) {
+    public void sendAccept(ProposalMSG proposalID, Object proposalValue) {
         System.out.println("in send Accept (todo)");
         //todo
     }
 
     //2b
-    public void sendAccepted(ProposalID proposalID, Object acceptedValue) {
+    public void sendAccepted(ProposalMSG proposalID, Object acceptedValue) {
         System.out.println("in receive Accepted (todo)");
         //todo
     }
@@ -302,12 +302,12 @@ public class Member extends Communication{
 //        return true;
 //    }
 //
-//    public ProposalID inMSG(int fromMID) throws InterruptedException, IOException, ClassNotFoundException {
+//    public ProposalMSG inMSG(int fromMID) throws InterruptedException, IOException, ClassNotFoundException {
 //        Socket socket = getSocket(fromMID);
 //        ObjectInputStream ois = getOIS(socket);
-//        ProposalID inPID = null;
+//        ProposalMSG inPID = null;
 //        try {
-//            inPID = (ProposalID) ois.readObject();
+//            inPID = (ProposalMSG) ois.readObject();
 //            System.out.printf(">> MSG in %s -> M%s: (%s, %s)",fromMID, this.MID, inPID.getProposalID(), inPID.getValue());
 //        } catch(Exception e){
 //            System.out.println("Error in receiving in message");

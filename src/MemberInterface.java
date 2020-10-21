@@ -7,17 +7,17 @@ public interface MemberInterface {
     public void accept(int value);
     public void accept(Socket member, String inMSG) throws IOException; // proposer
     public void setProposal(Object value);// proposer
-    public void receivePromise(int fromUID, ProposalID proposalID, ProposalID prevAcceptedID); // proposer
+    public void receivePromise(int fromUID, ProposalMSG proposalID, ProposalMSG prevAcceptedID); // proposer
 
-    public void receivePrepare(int fromUID, ProposalID proposalID); // acceptor
-    public void receiveAccept(int fromUID, ProposalID proposalID, Object value); // acceptor
+    public void receivePrepare(int fromUID, ProposalMSG proposalID); // acceptor
+    public void receiveAccept(int fromUID, ProposalMSG proposalID, Object value); // acceptor
 
-//    public void sendPrepare(ProposalID proposalID); //msg
-//    public void sendPromise(int proposerUID, ProposalID proposalID, ProposalID previousID, Object acceptedValue);
-//    public void sendAccept(ProposalID proposalID, Object proposalValue); //msg
-//    public void sendAccepted(ProposalID proposalID, Object acceptedValue); //msg
-//    public void onResolution(ProposalID proposalID, Object value); //msg
+//    public void sendPrepare(ProposalMSG proposalID); //msg
+//    public void sendPromise(int proposerUID, ProposalMSG proposalID, ProposalMSG previousID, Object acceptedValue);
+//    public void sendAccept(ProposalMSG proposalID, Object proposalValue); //msg
+//    public void sendAccepted(ProposalMSG proposalID, Object acceptedValue); //msg
+//    public void onResolution(ProposalMSG proposalID, Object value); //msg
 
     public boolean isComplete();     //learner
-    public void receiveAccepted(int fromUID, ProposalID proposalID, Object acceptedValue); //learner
+    public void receiveAccepted(int fromUID, ProposalMSG proposalID, Object acceptedValue); //learner
 }

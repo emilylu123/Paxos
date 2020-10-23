@@ -15,15 +15,14 @@ import java.net.Socket;
 public class Communication {
 
     protected static final int MAX_TRY = 5;
-    protected static int localport;
     protected static final String host = "0.0.0.0";
 
-    public static Socket getSocket (int toMID) throws InterruptedException, IOException, ClassNotFoundException {
+    public static Socket getSocket (int toMID) throws Exception {
         Socket socket = null;
         int acceptorIP = toMID * 1111;
         int count_try = 0;
 
-        while(count_try<=MAX_TRY){
+        while(count_try<MAX_TRY){
             count_try++;
             try{
                 socket = new Socket ( host, acceptorIP);
@@ -31,10 +30,41 @@ public class Communication {
             } catch (Exception e) {
                 System.out.println(">> Connection to M" + toMID + " failed. Will retry in 3s. Retry " + count_try);
                 Thread.sleep(3000);
-                e.printStackTrace();
             }
         }
+        if (count_try == 5)
+            System.out.println(">> Connection is failed. M" + toMID + " is offline\n" + "*".repeat(40));
         return socket;
+    }
+
+    public static String outMSG(int toMID, Object outOBJ) {
+        try {
+            Socket socket = getSocket(toMID);
+            ProposalMSG pid = (ProposalMSG) outOBJ;
+            if (socket != null && socket.isConnected()){
+                ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                oos.writeObject(outOBJ);
+                oos.flush();
+                return " send -> M" + toMID + " :: " + pid.getProposalMSG();
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to send message to " + toMID);
+        }
+        return null;
+    }
+
+    public static ProposalMSG inMSG(Socket socket) throws Exception {
+        ObjectInputStream ois ;
+        ProposalMSG inPID = null;
+        if (socket != null && socket.isConnected()){
+            ois = new ObjectInputStream(socket.getInputStream());
+            try {
+                inPID = (ProposalMSG) ois.readObject();
+            } catch(Exception e){
+                System.out.println("Failed to receive in coming message");
+            }
+        }
+        return inPID;
     }
 
     public static ObjectOutputStream getOOS(Socket socket) throws IOException {
@@ -44,34 +74,9 @@ public class Communication {
         return null;
     }
 
-
     public static ObjectInputStream getOIS(Socket socket) throws IOException {
         if (socket != null && socket.isConnected())
             return new ObjectInputStream(socket.getInputStream());
         return null;
-    }
-
-    public static boolean outMSG(int toMID, Object outOBJ) throws InterruptedException, IOException, ClassNotFoundException {
-        Socket socket = getSocket(toMID);
-        ObjectOutputStream oos = getOOS(socket);
-        oos.writeObject(outOBJ);
-        oos.flush();
-        ProposalMSG pid = (ProposalMSG) outOBJ;
-        System.out.printf(">> MSG out:: -> M%s: %s\n",toMID, pid.getProposalMSG());
-        return true;
-    }
-
-    public static ProposalMSG inMSG(int fromMID) throws InterruptedException, IOException, ClassNotFoundException {
-        Socket socket = getSocket(fromMID);
-        ObjectInputStream ois = getOIS(socket);
-        ProposalMSG inPID = null;
-        try {
-            inPID = (ProposalMSG) ois.readObject();
-            System.out.printf(">> MSG in:: M%s -> : %s\n",fromMID, inPID.getProposalMSG());
-        } catch(Exception e){
-            System.out.println("Error in receiving in message");
-            e.printStackTrace();
-        }
-        return inPID;
     }
 }

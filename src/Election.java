@@ -6,12 +6,12 @@
 // Year: 2020
 // Assignment3: Paxos
 //=====================================
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.util.*;
-/*10 points -  Paxos implementation works when two councillors send voting proposals at the same time
 
-30 points – Paxos implementation works in the case where all M1-M9 have immediate responses to voting queries
-
+import static java.lang.Thread.sleep;
+/*
 30 points – Paxos implementation works when M1 – M9 have responses to voting queries suggested by the profiles above,
 including when M2 or M3 propose and then go offline
 
@@ -26,27 +26,14 @@ Fast Byzantine Paxos implementation that works when councilors lie, collude, or 
 in some voting queries but participate in others.*/
 
 public class Election {
-    protected final int councilSize = 9;
-    protected final int majority = councilSize/2 + 1;
     protected static Member M1, M2, M3, M4, M5, M6, M7, M8, M9;
-    protected List<Member> council = new ArrayList<>();//Define a voters collection
-    protected List<Member> proposers = new ArrayList<>();//Define a proposers collection
-
+    protected static ArrayList<Member> council = new ArrayList<>();
 
     //Start all servers
-    public void start() throws Exception {
-        if (council != null && council.size() >0)
-            throw new Exception("restart error");
+    public void start() {
+        cleanUp();  // delete backup files
         createMembers();
         startElection();
-    }
-
-    //Started server registration
-    public void register(Member member) {
-        council.add(member);
-        if (member == M1 || member == M2 || member == M3) {
-            proposers.add(member);
-        }
     }
 
     public void createMembers(){
@@ -59,60 +46,56 @@ public class Election {
         M7 = new Member(7);
         M8 = new Member(8);
         M9 = new Member(9);
-        register(M1);
-        register(M2);
-        register(M3);
-        register(M4);
-        register(M5);
-        register(M6);
-        register(M7);
-        register(M8);
-        register(M9);
+        council.addAll(Arrays.asList(M1, M2, M3, M4, M5, M6, M7, M8, M9));
     }
     //Create a legal Election Council with 9 members
     public synchronized void startElection() {
         System.out.println("<<<<<<<<<< Start Council Election >>>>>>>>");
-        new Thread(M1::connecting).start();
-        new Thread(M2::connecting).start();
-        new Thread(M3::connecting).start();
-        new Thread(M4::connecting).start();
-        new Thread(M5::connecting).start();
-        new Thread(M6::connecting).start();
-        new Thread(M7::connecting).start();
-        new Thread(M8::connecting).start();
-        new Thread(M9::connecting).start();
+        for (Member member : council) {
+            new Thread(member::connecting).start();
+        }
     }
 
-    protected void propose(Member a_member) throws InterruptedException {
-        Thread.sleep(2000);
+    protected void propose(Member a_member) {
         new Thread(()->{
-            while(true){
-                try {
-                    // phrase 1 : prepare(n), receive promise
-                    System.out.println("<<<<< Election:: run proposal M" + a_member.MID + ">>>>>\n");
-                    a_member.prepare();
-                    Thread.sleep(3000);
-                    // phrase 2 : accept(n, value)
-                    if(a_member.promiseCount >= majority){
-                        System.out.printf("\nElection:: M%s has received majority promises\n", a_member.MID);
-                        int value = (int) a_member.proposalID.getValue(); // todo
-//                        a_member.accept(value);
-                        a_member.accept();
-                        if (a_member.acceptCount>majority){
-                            System.out.printf("\nElection:: M%s has received majority accepted\n", a_member.MID);
-                            // todo
-                            a_member.sendAll();
-                            break;
-                        }
-                    } else {
-                        System.out.printf("\nElection:: M%s increase Proposal ID\n", a_member.MID);
-                        a_member.proposalID.incrementProposalID(); // increase proposal ID and retry prepare(n)
-                    }
-                } catch (InterruptedException | IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
+            try {
+                System.out.println("<<<<< Election:: M" + a_member.MID + " will send proposal >>>>>");
+                a_member.prepare(); // phrase 1 : prepare(n), receive promise
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void cleanUp() {
+        try{
+            System.out.println(">> Test Preparation:: Delete all local backup files.\n");
+            for (int i = 1; i <=9 ; i++) {
+                String fileName = i +"data.txt";
+                File file = new File(fileName);
+                if(file.exists()) {
+                    file.delete();
                 }
             }
+        } catch (Exception e){
+            System.out.println("Error in delete files function");
         }
-        ).start();
+    }
+
+    protected void goOffline(int id) throws IOException {
+        System.out.println("<<<<< Election:: M" + id + " will be offline after proposal >>>>>");
+        if (id == 2){
+            M2.isOffline = true;
+        } else if (id == 3) {
+            M3.isOffline = true;
+        }
+    }
+
+    protected void goBusy(){
+
+    }
+
+    protected void goCrazy(){
+
     }
 }

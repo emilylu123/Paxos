@@ -23,7 +23,7 @@ public class ProposalMSG implements Serializable {
         createVotingValue();
     }
 
-    public ProposalMSG(int MID, int PID, Object value, String type ) {
+    public ProposalMSG(int MID, int PID, Object value, String type) {
         this.MID = MID;
         this.PID = PID;
         this.value = value;
@@ -31,15 +31,15 @@ public class ProposalMSG implements Serializable {
     }
 
     // M1-M3 will always vote for them self, and M4-M9 randomly vote from [M1, M2, M3]
-    public void createVotingValue(){
+    public void createVotingValue() {
         if (this.MID <= 3) this.value = MID;  // M1 M2 M3 always vote for itself
-        else this.value = new Random().nextInt(9)+1;
+        else this.value = new Random().nextInt(9) + 1;
     }
 
     // generate unique PID = current time stamp (8th digits ~ end) + 1 digit of random number +MemberID
     public void generateProposalID() {
-        int ran = new Random().nextInt(9)+1;
-        String timeStamp = new Date().getTime() + Integer.toString(ran *10 + this.MID);
+        int ran = new Random().nextInt(9) + 1;
+        String timeStamp = new Date().getTime() + Integer.toString(ran * 10 + this.MID);
         this.PID = Integer.parseInt(timeStamp.substring(8));
     }
 
@@ -51,20 +51,21 @@ public class ProposalMSG implements Serializable {
         if (getClass() != obj.getClass()) return false;
 
         ProposalMSG other = (ProposalMSG) obj;
-        if (PID != other.PID)  return false;
-        if (value == null){
+        if (PID != other.PID) return false;
+        if (MID != other.MID) return false;
+        if (value == null) {
             return other.value == null;
         } else {
             if (other.value == null) return false;
-            else{
+            else {
                 return (int) value == (int) other.value;
             }
         }
     }
 
     // a simple way to print proposalMSG object in a nice format
-    public String getProposalMSG(){
-        return this.type + " ( " + this.getPID() + ", " + this.getValue() + ") from M" + this.MID;
+    public String getProposalMSG() {
+        return this.type + " ( " + this.getPID() + ", " + this.getValue() + ") <- M" + this.MID;
     }
 
     public int getPID() {

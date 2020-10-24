@@ -6,18 +6,15 @@
 // Year: 2020
 // Assignment3: Paxos
 //=====================================
-import java.io.*;
-import java.lang.reflect.Array;
-import java.util.*;
 
-import static java.lang.Thread.sleep;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 /*
 30 points – Paxos implementation works when M1 – M9 have responses to voting queries suggested by the profiles above,
 including when M2 or M3 propose and then go offline
 
-20 points – Testing harness for the above scenarios + evidence that they work (in the form of printouts)
-
-10 points for the quality of your code:
 Bonus
 10 points – Paxos implementation works with a number ‘n’ of councilors with four profiles of response times:
 immediate;  medium; late; never
@@ -36,7 +33,7 @@ public class Election {
         startElection();
     }
 
-    public void createMembers(){
+    public void createMembers() {
         M1 = new Member(1);
         M2 = new Member(2);
         M3 = new Member(3);
@@ -48,6 +45,7 @@ public class Election {
         M9 = new Member(9);
         council.addAll(Arrays.asList(M1, M2, M3, M4, M5, M6, M7, M8, M9));
     }
+
     //Create a legal Election Council with 9 members
     public synchronized void startElection() {
         System.out.println("<<<<<<<<<< Start Council Election >>>>>>>>");
@@ -57,7 +55,7 @@ public class Election {
     }
 
     protected void propose(Member a_member) {
-        new Thread(()->{
+        new Thread(() -> {
             try {
                 System.out.println("<<<<< Election:: M" + a_member.MID + " will send proposal >>>>>");
                 a_member.prepare(); // phrase 1 : prepare(n), receive promise
@@ -68,34 +66,34 @@ public class Election {
     }
 
     private void cleanUp() {
-        try{
+        try {
             System.out.println(">> Test Preparation:: Delete all local backup files.\n");
-            for (int i = 1; i <=9 ; i++) {
-                String fileName = i +"data.txt";
+            for (int i = 1; i <= 9; i++) {
+                String fileName = i + "data.txt";
                 File file = new File(fileName);
-                if(file.exists()) {
+                if (file.exists()) {
                     file.delete();
                 }
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             System.out.println("Error in delete files function");
         }
     }
 
     protected void goOffline(int id) throws IOException {
         System.out.println("<<<<< Election:: M" + id + " will be offline after proposal >>>>>");
-        if (id == 2){
+        if (id == 2) {
             M2.isOffline = true;
         } else if (id == 3) {
             M3.isOffline = true;
         }
     }
 
-    protected void goBusy(){
+    protected void goBusy() {
 
     }
 
-    protected void goCrazy(){
+    protected void goCrazy() {
 
     }
 }

@@ -27,9 +27,9 @@ public class Member extends Communication {
     protected ProposalMSG acceptedMSG; //a
     protected Object finalValue = null; //l
     protected ProposalMSG finalProposalMSG = null; //l
-    protected List<Integer> promisesReceived = new ArrayList<>();
-    protected HashMap<ProposalMSG, Member> proposals = new HashMap<>();  //l
-    protected HashMap<Integer, ProposalMSG> acceptors = new HashMap<>();  //l
+    protected List<Integer> promisesReceived;
+    protected HashMap<ProposalMSG, Member> proposals;  //l
+    protected HashMap<Integer, ProposalMSG> acceptors;  //l
     protected Socket socket;
     protected ServerSocket server;
     protected int localport;
@@ -37,6 +37,8 @@ public class Member extends Communication {
     protected boolean isOffline = false;   // to simulate M2 M3 random go offline
     protected boolean isRandom = false;  // to simulate M4-M9 random network issue
     protected boolean isByzantine = false;  // for Byzantine's algorithm
+    protected boolean isDone = false;
+
 
     // M1, M2, M3 will proposal for themselves, M4-M9 will randomly choose one from M1-M3 as proposal value
     Member(int MID) {
@@ -71,8 +73,8 @@ public class Member extends Communication {
                  3 isByzantine -> lie, collude, or intentionally do not participate (fast Byzantine)
                  */
                 if (isOffline) {
-                    System.out.println("\n>> Warning:: M" + this.MID + " will be offline soon \n\n");
                     server.close();
+                    printNice("Offline Warning:: ", "       M" + this.MID + " is offline");
                 }
                 if (isRandom) {
                     // immediate;  medium; late; never
@@ -96,7 +98,8 @@ public class Member extends Communication {
                     System.out.println("\n>> Warning:: M" + this.MID + " will behave crazy\n\n");
                     // todo fast Byzantine
                 }
-            } while (true);
+            } while (!isDone);
+            if (this.MID == 1) finalResultOutput();
 //            } while (!isOffline);  // todo check this condition
 //            System.out.println("M" + this.MID + " is offline." + this.socket.isClosed() + this.socket.isConnected());
         } catch (Exception e) {
@@ -107,11 +110,14 @@ public class Member extends Communication {
     /*  Phrase 1a :
         Member generate a proposal ID and send to acceptors*/
     public void prepare() {
-        this.promisesReceived.clear();  // clear all promises that have received with earlier proposal(s)
-        // todo anything more to clear?
+        // clear all data that has received with earlier proposal(s) to restart a proposal
+        this.promisesReceived = new ArrayList<>();
+        this.proposals = new HashMap<>();  //l
+        this.acceptors = new HashMap<>();  //l
         this.proposalMSG.generateProposalID();  // unique ID = time stamp + ID
         ProposalMSG toSendMSG = new ProposalMSG(this.MID, this.proposalMSG.getPID(), null, "Prepare");
         try {
+            printNice(" [ Start Phrase 1 ] "," M" + this.MID + " Send Prepare Request to all members");
 //            System.out.print("\n[ Phrase 1 start ] :: \n[ 1a ] ");
             broadcast(toSendMSG, "Prepare"); // send prepare(n) to all members include itself
         } catch (Exception e) {
@@ -167,14 +173,14 @@ public class Member extends Communication {
             maxProposalID = proposalMSG.getPID();
             // todo check?? sendPromise (acceptedPID, acceptedValue);
             this.promisedMSG = new ProposalMSG(this.MID, maxProposalID, acceptedValue, "Promise");
-            System.out.printf("[ 1b.1 ] Acceptor M%d:: send to -> M%d %s\n", this.MID, proposerMID,
+            System.out.printf("[ 1b ] Acceptor M%d:: send to -> M%d %s\n", this.MID, proposerMID,
                     promisedMSG.getProposalMSG());
             outMSG(proposerMID, promisedMSG);
         } else if (proposalMSG.getPID() < maxProposalID) {
             sendNah(proposerMID);//ignore the prepare request or being nice to return "Nah"
 //        }
             // ProposalMSG previousID, Object acceptedValue
-//        else if (this.promisedMSG != null && proposalMSG.equals(promisedMSG)) {  // duplicate message
+//        else if (this.promisedMSG != null && proposalMSG.getPID()==maxProposalID) {  // duplicate message
 //            sendPromise(fromMID, this.promisedMSG);
 //            sendPromise(fromMID, proposalMSG, acceptedMSG, acceptedValue);
         } else {
@@ -188,9 +194,9 @@ public class Member extends Communication {
     public void receivePromise(ProposalMSG promiseMSG) {
 //        System.out.println("\n [ Receive a promise ] :: " + promiseMSG.getProposalMSG());
         int acceptorMID = promiseMSG.getMID();
-
         int prevAcceptedPID = promiseMSG.getPID();
         Object prevAcceptedValue = promiseMSG.getValue();
+//        if (isComplete()) return;
         // return if receives from itself or already received
         if (promiseMSG.equals(this.proposalMSG) || promisesReceived.contains(acceptorMID)) {
             System.out.println("~~~~~ Duplicate promise & return ~~~~~");
@@ -198,11 +204,12 @@ public class Member extends Communication {
         }
         // add memberID to promises received collection
         promisesReceived.add(acceptorMID);
-        System.out.printf("[ 1b.2 ] Proposer M%d:: <- Receive %s \t( M%d ::Total %d Promise)\n", this.MID,
-                promiseMSG.getProposalMSG(), this.MID, promisesReceived.size());
+//        System.out.printf("[ 1b.2 ] Proposer M%d:: <- Receive %s \t( M%d ::Total %d Promise)\n", this.MID,
+//                promiseMSG.getProposalMSG(), this.MID, promisesReceived.size());
 
         if (lastAcceptedMSG == null || promiseMSG.getPID() > lastAcceptedMSG.getPID()) {
             lastAcceptedMSG = promiseMSG;
+            maxProposalID = prevAcceptedPID;
             System.out.println("[ Update ] new PID found & set -> lastAcceptedMSG " + lastAcceptedMSG.getProposalMSG());
 
             if (prevAcceptedValue != null)
@@ -210,12 +217,10 @@ public class Member extends Communication {
         }
 
         if (promisesReceived.size() == majority) {
-            System.out.printf("\n<<<<< M%d has Received Majority Promises (%d)!! send Accept Request to all members >>>>>\n\n", this.MID, promisesReceived.size());
-
-            if (lastAcceptedMSG.getValue() != null)
-                this.proposalMSG.setValue(lastAcceptedMSG.getValue());
-
-
+            printNice(" [ Start Phrase 2 ] "," M" + this.MID + " has Received Majority Promises ( "
+                    + promisesReceived.size() + " )\n Send Accept Request to all members");
+//            if (lastAcceptedMSG.getValue() != null)
+//                this.proposalMSG.setValue(lastAcceptedMSG.getValue());
             if (this.proposalMSG.getValue() != null) {
                 try {
                     broadcast(this.proposalMSG, "Accept"); // broadcast proposalMSG (PID,V) to all
@@ -238,17 +243,16 @@ public class Member extends Communication {
         System.out.printf("[ 2a ] M%d receive %s \n", this.MID, acceptRequestMSG.getProposalMSG());
         // todo check??
         if (promisedMSG == null || acceptRequestMSG.getPID() >= maxProposalID) {
-            if (maxProposalID != acceptRequestMSG.getPID()) {
+            if (maxProposalID > acceptRequestMSG.getPID()) {
                 maxProposalID = acceptRequestMSG.getPID();
                 System.out.println("[ Update ] maxProposalID = " + maxProposalID);
             }
-            promisedMSG = acceptRequestMSG;
-            this.acceptedMSG = new ProposalMSG(this.MID, acceptRequestMSG.getPID(), acceptRequestMSG.getValue(),
-                    "Accepted");
-//            String backupMSG = acceptedMSG.getPID() + ", " + acceptedMSG.getValue();
+            acceptedValue = acceptRequestMSG.getValue();
+            this.promisedMSG = new ProposalMSG(this.MID, maxProposalID, acceptedValue, "Promise");
+            this.acceptedMSG = new ProposalMSG(this.MID, maxProposalID, acceptedValue, "Accepted");
             saveToLocalData(acceptedMSG.getValue());  // save to local file
         } else {
-            this.acceptedMSG = new ProposalMSG(this.MID, maxProposalID, null, "Accepted");
+            this.acceptedMSG = new ProposalMSG(this.MID, maxProposalID, null, "Accepted"); // todo
         }
         outMSG(proposerMID, acceptedMSG);  // send accepted MSG to proposer
     }
@@ -257,12 +261,10 @@ public class Member extends Communication {
     register AcceptMSG.V -> acceptedValue & send  AcceptedMSG to the Proposer (Learner)
     Else ignore.*/
     public void receiveAccepted(ProposalMSG acceptedMSG) throws Exception {
+        if (isComplete()) return;
         int acceptorMID = acceptedMSG.getMID();
         int acceptorPID = acceptedMSG.getPID();
         Object acceptedValue = acceptedMSG.getValue();
-        System.out.printf("[ Phrase 2b ] M%d receive %s\n", this.MID, acceptedMSG.getProposalMSG());
-
-        if (isComplete()) return;
 
         ProposalMSG oldMID = acceptors.get(acceptorMID);
 
@@ -286,49 +288,44 @@ public class Member extends Communication {
         thisProposal.acceptCount +=1;
         thisProposal.retentionCount +=1;*/
 
-        System.out.println("[ 2b ] receive Accepted total number - " + acceptors.size());
+        System.out.println("[ 2b ] M"+this.MID+" receive Accepted total number - " + acceptors.size());
 //        if (thisProposal.acceptCount +1 == majority ) { //todo check
-        if (acceptors.size() >= majority) {
+        if (acceptors.size() == majority) {
             System.out.printf("*************** M%d has received Enough Accepted (%d)!! ************ \n", this.MID,
                     acceptedValue, acceptors.size());
 
             if (acceptorPID > this.proposalMSG.getPID()) {
-                System.out.printf("\n**** M%d Found new Proposal with larger PID (%d)from M%d *****\nM%d will go back" +
-                                " to [ Phrase 1 ] to generate a new ProposalID\n\n", this.MID, acceptorPID, acceptorMID, this.MID);
-                System.out.println();
-                prepare(); // todo check
+                printNice("Go back to [ Phrase 1 ]","M" + this.MID +" Found larger PID \n"
+                        + "M" +acceptorPID + " will generate a new Proposal ");
+                prepare();
                 return;
             } else {
+                printNice(" [ Start Learn ] "," M" + this.MID + " has Received Majority Accepted ( "
+                        + promisesReceived.size() + " )\n Send Final Agreement to all members");
+                finalValue = acceptedValue;
                 finalProposalMSG = new ProposalMSG(this.MID, acceptedMSG.getPID(), acceptedValue, "Final");
                 proposals.clear();
                 acceptors.clear();
-                agreement(finalProposalMSG);  // acceptedValue
+                finalAgreement(finalProposalMSG);  // acceptedValue
             }
         }
-    }
-
-    private void receiveFinal(ProposalMSG inObject) {
-        System.out.println(">> Final :: M" + MID + " receive Final and save to local file (Please check results)");
-        saveToLocalData(inObject.getValue());
-        // todo stop socket?
     }
 
     private void sendNah(int toMID) {
         ProposalMSG nah = new ProposalMSG(this.MID, -1, null, "Nah");
         outMSG(toMID, nah);
-//        System.out.println(" M" + this.MID + "send Nah Nah Nah Nah Nah Nah Nah Nah to " + toMID);
     }
 
     private void receiveNah(ProposalMSG obj) {
         int fromMID = obj.getMID();
         System.out.println(">> M" + this.MID + " receive Nah Nah Nah Nah Nah Nah Nah from M" + fromMID);
         // todo go back to stage 1
-//        nahCount += 1;
-//        if (nahCount==majority){
-//            System.out.println("M" + this.MID + "will go back to [ Phrase 1 ] to generate a new ProposalID");
-//            nahCount = 0; // reset nah count
-//            prepare();
-//        }
+        nahCount += 1;
+        if (nahCount==majority){
+            System.out.println("M" + this.MID + "will go back to [ Phrase 1 ] to generate a new ProposalID");
+            nahCount = 0; // reset nah count
+            prepare();
+        }
 //        if (isByzantine) sendWhatever(fromMID);
     }
 
@@ -342,32 +339,39 @@ public class Member extends Communication {
         System.out.println("in receiver whatever (todo)");
     }
 
-    private void agreement(ProposalMSG proposalMSG) throws Exception {
+    private void finalAgreement(ProposalMSG proposalMSG) throws Exception {
         System.out.println("\n******** Agreement on Final value -> " + proposalMSG.getProposalMSG() + "********\n");
         broadcast(proposalMSG, "Final");
+//        finalResultOutput();
+    }
+
+    protected void receiveFinal(ProposalMSG inObject) throws IOException {
+        if (isDone) return;
+        System.out.println(">> Final :: M" + MID + " receive Final Message ( Save data to local file )");
+        saveToLocalData(inObject.getValue());
+        finalResult();
+        isDone = true;
+        server.close(); // todo stop socket?
     }
 
     // final value
     public void broadcast(ProposalMSG proposalMSG, String type) throws Exception {
         ProposalMSG toSendMSG = new ProposalMSG(this.MID, proposalMSG.getPID(), proposalMSG.getValue(), type);
         if (type.equals("Prepare")) {
-            System.out.println("\n[ Phrase 1 start ] :: [ 1a ] M" + this.MID + " Broadcast " + proposalMSG.getProposalMSG());
+            System.out.println("\n[ Phrase Prepare ] M" + this.MID + " Broadcast " + proposalMSG.getProposalMSG());
         } else if (type.equals("Accept")) {
-            System.out.println("\n[ Phrase 2 Start ] :: [ 2a ] M" + this.MID + " Broadcast " + proposalMSG.getProposalMSG());
+            System.out.println("\n[ Phrase Accept ] M" + this.MID + " Broadcast " + proposalMSG.getProposalMSG());
         }
-
 
         for (int i = 1; i <= 9; i++) {
             outMSG(i, toSendMSG);
         }
-        if (type.equals("Final"))
-            finalResultOutput(); // todo? what is next action ? how to known it is complete
+//        if (type.equals("Final"))
+//            finalResultOutput();
     }
 
-    // todo where to use this
     public boolean isComplete() {
-        if (finalProposalMSG == null) return false;
-        else return finalProposalMSG.getValue() != null;
+        return finalProposalMSG != null;
     }
 
     // close previous connection if any
@@ -410,9 +414,9 @@ public class Member extends Communication {
         if (!file.exists()) {
             file.createNewFile();
         } else if (file.exists() && file.length() == 0) {
-            System.out.println("Reading... Local File is EMPTY.");
+//            System.out.println("Reading... Local File is EMPTY.");
         } else if (file.exists() && file.length() != 0) {
-            System.out.println("Reading Proposal from local file " + FILE_TO_RECOVER);
+//            System.out.println("Reading Proposal from local file " + FILE_TO_RECOVER);
             content = "";
             BufferedReader br = new BufferedReader(new FileReader(file));
             String line = br.readLine();
@@ -425,6 +429,15 @@ public class Member extends Communication {
         return content;
     }
 
+    public void finalResult() throws IOException {
+
+        String output = ">> [ Paxos End ] Data saved in M" + this.MID + ": ";
+        String content = readLocalData(this.MID + "data.txt");
+        if (content.isEmpty()) {
+            content = "N/A    ( Possible lost connection with this member )\n" ;
+        }
+        System.out.println(output + content);
+    }
     public void finalResultOutput() throws IOException {
         String output = "";
         LinkedList<String> check = new LinkedList<>();
@@ -437,29 +450,26 @@ public class Member extends Communication {
                 output += "Data saved in M" + i + ": N/A    ( Possible lost connection with this member )\n" ;
             }
         }
-        if (checkPaxos(check)) {
-            System.out.println();
+        if (checkPaxosResults(check)) {
             printNice(" Paxos Works! Output: ", output);
         } else
             printNice(" Paxos failed! Output: ", output);
     }
 
-    public boolean checkPaxos(LinkedList<String> check) {
+    public boolean checkPaxosResults(LinkedList<String> check) {
         for (int i = 0; i < check.size() - 1; i++) {
             if (!check.get(i).equals(check.get(i + 1))) {
-                System.out.println("Paxos Failed! Paxos Failed! Paxos Failed! ");
                 return false;
             }
         }
-        System.out.println("Paxos Works! Paxos Works! Paxos Works! ");
         return true;
     }
 
     public void printNice(String keyword, String content) {
         String stars = "*************";
         if (keyword.isEmpty()) keyword = "*".repeat(6);
-        String output = "\n\n" + stars + keyword + stars + "\n" + content +
-                stars + "*".repeat(keyword.length()) + stars + "\n\n";
+        String output = "\n\n" + stars + keyword + stars + "\n" + content + "\n" +
+                stars + "*".repeat(keyword.length()) + stars + "\n";
         System.out.println(output);
     }
 }

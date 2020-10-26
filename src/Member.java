@@ -35,9 +35,10 @@ public class Member extends Communication {
     protected int localport;
     protected String backupPath = "";
     protected boolean isOffline = false;   // to simulate M2 M3 random go offline
-    protected boolean isRandom = false;  // to simulate M4-M9 random network issue
+//    protected boolean isRandom = false;  // to simulate M4-M9 random network issue
     protected boolean isByzantine = false;  // for Byzantine's algorithm
     protected boolean isDone = false;
+    protected int randomResponse = 0;
 
 
     // M1, M2, M3 will proposal for themselves, M4-M9 will randomly choose one from M1-M3 as proposal value
@@ -76,30 +77,26 @@ public class Member extends Communication {
                     server.close();
                     printNice("Offline Warning:: ", "       M" + this.MID + " is offline");
                 }
-                if (isRandom) {
-                    // immediate;  medium; late; never
-                    int random = new Random().nextInt(10);
-                    System.out.println("\n>> Warning:: M" + this.MID + " will have random response " + random + "\n");
-                    if (random == this.MID) {   // never response
-                        System.out.println("\n>> Random:: M" + this.MID + " - never response\n\n");
-                        socket.close();
-                    } else if (random % 2 == 0) {  // immediately response as normal
-                        System.out.println("\n>> Random:: M" + this.MID + " - immediately response\n\n");
-                    } else if (random <= 5) {
-                            System.out.println("\n>> Random:: M" + this.MID + " - medium response\n\n");
-                            socket.wait(random * 1000);
-                    } else {
-                        System.out.println("\n>> Random:: M" + this.MID + " - late response\n\n");
-                        socket.wait(random * 3000);
-                        System.out.println("M" + this.MID + " will wait " + random + "s");
-                    }
+                // immediate;  medium; late; never
+                if (randomResponse == 0) {   // never response
+                    System.out.println("\n>> Random:: M" + this.MID + " - immediately response\n\n");
+                } else if (randomResponse == 1) {  // immediately response as normal
+                        System.out.println("\n>> Random:: M" + this.MID + " - medium response\n\n");
+                        Thread.sleep(2000);
+                } else if (randomResponse == 2) {
+                    System.out.println("\n>> Random:: M" + this.MID + " - late response\n\n");
+                        Thread.sleep(6000);
+                } else {
+                    System.out.println("\n>> Random:: M" + this.MID + " - never response\n\n");
+                    socket.close();
                 }
                 if (isByzantine) {
                     System.out.println("\n>> Warning:: M" + this.MID + " will behave crazy\n\n");
                     // todo fast Byzantine
                 }
             } while (!isDone);
-            if (this.MID == 1) finalResultOutput();
+//            if (this.MID == 1)
+                finalResultOutput();
 //            } while (!isOffline);  // todo check this condition
 //            System.out.println("M" + this.MID + " is offline." + this.socket.isClosed() + this.socket.isConnected());
         } catch (Exception e) {

@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 /*
 30 points – Paxos implementation works when M1 – M9 have responses to voting queries suggested by the profiles above,
 including when M2 or M3 propose and then go offline
@@ -81,7 +82,7 @@ public class Election {
     }
 
     protected void goOffline(int id) throws IOException {
-        System.out.println("<<<<< Election:: M" + id + " will be offline after proposal >>>>>");
+        System.out.println("<<<<< Go Offline:: M" + id + " will be offline after proposal >>>>>");
         if (id == 2) {
             M2.isOffline = true;
         } else if (id == 3) {
@@ -89,11 +90,17 @@ public class Election {
         }
     }
 
-    protected void goBusy() {
-
+    protected void doRandomResponse() throws IOException {
+        System.out.println("<<<<< Random:: M4 - M9 will have random response time >>>>>");
+            M4.randomResponse = random();
+            M5.randomResponse = random();
+            M6.randomResponse = random();
+            M7.randomResponse = random();
+            M8.randomResponse = random();
+            M9.randomResponse = random();
     }
 
-    protected void goCrazy() {
-
+    protected int random(){
+        return new Random().nextInt(4);
     }
 }

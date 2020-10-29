@@ -13,7 +13,6 @@ import java.net.Socket;
 import java.util.*;
 
 public class Member extends Communication {
-
     protected final int majority = 9 / 2 + 1;
     protected int MID; //memberID 1-9
     protected ProposalMSG proposalMSG = null; //p
@@ -35,11 +34,9 @@ public class Member extends Communication {
     protected int localport;
     protected String backupPath = "";
     protected boolean isOffline = false;   // to simulate M2 M3 random go offline
-//    protected boolean isRandom = false;  // to simulate M4-M9 random network issue
     protected boolean isByzantine = false;  // for Byzantine's algorithm
     protected boolean isDone = false;
     protected int randomResponse = 0;
-
 
     // M1, M2, M3 will proposal for themselves, M4-M9 will randomly choose one from M1-M3 as proposal value
     Member(int MID) {
@@ -67,7 +64,6 @@ public class Member extends Communication {
             do {
                 socket = server.accept();
                 accept(socket);
-
                  /* below parts will simulate random behaviors
                  1 isOffline -> M2, M3 goes offline
                  2 isRandom -> M4~M9 random response times: immediate;  medium; late; never
@@ -95,7 +91,7 @@ public class Member extends Communication {
                     // todo fast Byzantine
                 }
             } while (!isDone);
-//            if (this.MID == 1)
+            if (this.MID == 1)
                 finalResultOutput();
 //            } while (!isOffline);  // todo check this condition
 //            System.out.println("M" + this.MID + " is offline." + this.socket.isClosed() + this.socket.isConnected());
@@ -120,7 +116,6 @@ public class Member extends Communication {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.printf("\n ************ End :: M%s :: sent Prepare Request to all ***************\n\n", this.MID);
     }
 
     protected synchronized void accept(Socket a_member_socket) {
@@ -387,8 +382,10 @@ public class Member extends Communication {
     // delete and create a new backup file at first connection
     public void deleteBackup() {
         File backup = new File(backupPath);
-        if (backup.exists())
+        if (backup.exists()) {
             backup.delete();
+            System.out.println(backupPath + " is deleted.");
+        }
     }
 
     private void saveToLocalData(Object content) {

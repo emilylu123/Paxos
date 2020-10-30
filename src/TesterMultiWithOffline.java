@@ -8,7 +8,6 @@
 //=====================================
 
 import java.io.IOException;
-import java.util.Random;
 
 /* Single test to check if Paxos Algorithm works when multiple propose M1 M2 M3 proposal
 in the case where all M2 M3 will propose and then go offline
@@ -22,7 +21,6 @@ public class TesterMultiWithOffline extends Election {
         test.propose(M3);
 
         // randomly choose M2 or M3 go offline after making proposal
-        int ran = new Random().nextInt(2) + 2;
-        test.goOffline(ran);
+        test.goOffline();
     }
 }

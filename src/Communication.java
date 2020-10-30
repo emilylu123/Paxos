@@ -29,7 +29,7 @@ public class Communication {
                 break;
             } catch (Exception e) {
                 System.out.println(">> Connection to M" + toMID + " failed. Will retry in 3s. Retry " + count_try);
-                Thread.sleep(1000);
+                Thread.sleep(3000);
             }
         }
         if (count_try == 5)
@@ -57,8 +57,8 @@ public class Communication {
         ObjectInputStream ois;
         ProposalMSG inPID = null;
         if (socket != null && socket.isConnected()) {
-            ois = new ObjectInputStream(socket.getInputStream());
             try {
+                ois = new ObjectInputStream(socket.getInputStream());
                 inPID = (ProposalMSG) ois.readObject();
             } catch (Exception e) {
                 System.out.println("Failed to receive in coming message");

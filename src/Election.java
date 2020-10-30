@@ -8,7 +8,6 @@
 //=====================================
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -49,7 +48,7 @@ public class Election {
 
     //Create a legal Election Council with 9 members
     public synchronized void startElection() {
-        System.out.println("<<<<<<<<<< Start Council Election >>>>>>>>");
+        System.out.println("<<<<<<<<<<< Test:: Start Council Election >>>>>>>>>");
         for (Member member : council) {
             new Thread(member::connecting).start();
         }
@@ -81,26 +80,51 @@ public class Election {
         }
     }
 
-    protected void goOffline(int id) throws IOException {
-        System.out.println("<<<<< Go Offline:: M" + id + " will be offline after proposal >>>>>");
+    protected void goOffline() {
+        int id = new Random().nextInt(2) + 2;
+        System.out.println(">> Offline :: M" + id + " will be offline after proposal");
         if (id == 2) {
             M2.isOffline = true;
-        } else if (id == 3) {
+            M2.randomResponse = 3;
+        } else {
             M3.isOffline = true;
+            M3.randomResponse = 3;
         }
     }
 
-    protected void doRandomResponse() throws IOException {
-        System.out.println("<<<<< Random:: M4 - M9 will have random response time >>>>>");
-            M4.randomResponse = random();
-            M5.randomResponse = random();
-            M6.randomResponse = random();
-            M7.randomResponse = random();
-            M8.randomResponse = random();
-            M9.randomResponse = random();
+    protected void doRandom() {
+        goOffline();
+//        random(M2);
+//        random(M3);
+        random(M4);
+        random(M5);
+        random(M6);
+        random(M7);
+        random(M8);
+        random(M9);
     }
 
-    protected int random(){
-        return new Random().nextInt(4);
+    protected void random(Member member) {
+        int random = new Random().nextInt(6);
+        switch (random) {
+            case 0:
+            case 1:
+                member.randomResponse = 0;
+                System.out.println(">> Random:: M" + member.MID + " - immediately response " + random);
+                break;
+            case 2:
+            case 3:
+                member.randomResponse = 1;
+                System.out.println(">> Random:: M" + member.MID + " - medium response " + random);
+                break;
+            case 4:
+                member.randomResponse = 2;
+                System.out.println(">> Random:: M" + member.MID + " - late response " + random);
+                break;
+            default:
+                member.randomResponse = 3;
+                System.out.println(">> Random:: M" + member.MID + " - never response " + random);
+                break;
+        }
     }
 }

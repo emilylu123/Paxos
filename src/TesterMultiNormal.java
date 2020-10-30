@@ -1,6 +1,3 @@
-import java.io.IOException;
-import java.util.Random;
-
 //====================================
 // Distributed System
 // Name: Yingyao Lu
@@ -14,7 +11,7 @@ import java.util.Random;
 when multiple councillors send voting proposals at the same time
 */
 public class TesterMultiNormal extends Election {
-    public static void main(String[] args)  {
+    public static void main(String[] args) {
         Election test = new Election();
         test.start();
         test.propose(M1);

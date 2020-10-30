@@ -19,14 +19,14 @@ public class fastByzantineMember extends Communication {
     protected final int majority = 9 / 2 + 1;
     protected int MID; //memberID 1-9
     protected ProposalMSG proposalMSG = null; //p
-    protected ProposalMSG lastAcceptedMSG = null; //p
+    protected int lastPromisedPID = -1; //p
     protected int acceptCount = 0;
     protected int nahCount = 0;
-    protected int retentionCount = 0;
+    //    protected int retentionCount = 0;
     protected int maxProposalID = -1;
-    protected Object acceptedValue; //a
-    protected ProposalMSG promisedMSG; //a
-    protected ProposalMSG acceptedMSG; //a
+    protected Object acceptedValue = null; //a
+    protected ProposalMSG promisedMSG = null; //a
+    protected ProposalMSG acceptedMSG = null; //a
     protected Object finalValue = null; //l
     protected ProposalMSG finalProposalMSG = null; //l
     protected List<Integer> promisesReceived;
@@ -37,36 +37,33 @@ public class fastByzantineMember extends Communication {
     protected int localport;
     protected String backupPath = "";
     protected boolean isOffline = false;   // to simulate M2 M3 random go offline
-    protected boolean isByzantine = false;  // for Byzantine's algorithm
+    protected boolean isByzantine = true;  // for Byzantine's algorithm
     protected boolean isDone = false;
     protected int randomResponse = 0;
 
     // M1, M2, M3 will proposal for themselves, M4-M9 will randomly choose one from M1-M3 as proposal value
     fastByzantineMember(int MID) {
         this.MID = MID;
-        this.proposalMSG = new ProposalMSG(MID);  // set PID = 0
+        this.proposalMSG = new ProposalMSG(MID);  // set initial PID = 0
         this.backupPath = MID + "data.txt";
         this.localport = MID * 1111;  // number * 1111
     }
 
-    fastByzantineMember(int acceptCount, int retentionCount, Object acceptedValue) {
-        this.acceptCount = acceptCount;
-        this.retentionCount = retentionCount;
-        this.acceptedValue = acceptedValue;
-    }
+//    fastByzantineMember(int acceptCount, int retentionCount, Object acceptedValue) {
+//        this.acceptCount = acceptCount;
+//        this.retentionCount = retentionCount;
+//        this.acceptedValue = acceptedValue;
+//    }
 
     void connecting() {
         cleanCloseSocket();  // close previous connection if any
         deleteBackup();
-        File backup = new File(backupPath);
         try {
             // fault tolerance: read file and recover
-            if (!backup.createNewFile()) readLocalData(backupPath);
+            readLocalData(backupPath);
             server = new ServerSocket(this.localport);
-            System.out.printf("<<<<< Member M%d is ready to work >>>>>\n", this.MID);
+//            System.out.printf("<<<<< Socket M%d is ready:: %s >>>>>\n", this.MID, server.isBound());
             do {
-                socket = server.accept();
-                accept(socket);
                  /* below parts will simulate random behaviors
                  1 isOffline -> M2, M3 goes offline
                  2 isRandom -> M4~M9 random response times: immediate;  medium; late; never
@@ -74,29 +71,28 @@ public class fastByzantineMember extends Communication {
                  */
                 if (isOffline) {
                     server.close();
-                    printNice("Offline Warning:: ", "       M" + this.MID + " is offline");
+                    printNice(" Warning:: ", "       M" + this.MID + " is offline");
+                    break;
                 }
                 // immediate;  medium; late; never
-                if (randomResponse == 0) {   // never response
-                    System.out.println("\n>> Random:: M" + this.MID + " - immediately response\n\n");
-                } else if (randomResponse == 1) {  // immediately response as normal
-                    System.out.println("\n>> Random:: M" + this.MID + " - medium response\n\n");
-                    Thread.sleep(2000);
-                } else if (randomResponse == 2) {
-                    System.out.println("\n>> Random:: M" + this.MID + " - late response\n\n");
-                    Thread.sleep(6000);
-                } else {
-                    System.out.println("\n>> Random:: M" + this.MID + " - never response\n\n");
+                if (randomResponse == 0) {   // immediately response as normal
+                } else if (randomResponse == 1) {  // medium response
+                    Thread.sleep(1000);
+                } else if (randomResponse == 2) { // late response
+                    Thread.sleep(3000);
+                } else { // never response
                     socket.close();
+                    printNice(" Warning:: ", "       M" + this.MID + " is never response");
                 }
                 if (isByzantine) {
-                    System.out.println("\n>> Warning:: M" + this.MID + " will behave crazy\n\n");
+                    printNice(" Warning:: ", "       M" + this.MID + " will behave crazy (Fast Byzantine)");
                     // todo fast Byzantine
                 }
+                socket = server.accept();
+                accept(socket);
             } while (!isDone);
-            if (this.MID == 1)
+            if (this.MID == 1 || this.randomResponse == 1 || this.randomResponse == 2)
                 finalResultOutput();
-//            } while (!isOffline);  // todo check this condition
 //            System.out.println("M" + this.MID + " is offline." + this.socket.isClosed() + this.socket.isConnected());
         } catch (Exception e) {
             System.out.println("Error in Server Socket connection for M" + this.MID);
@@ -105,20 +101,14 @@ public class fastByzantineMember extends Communication {
 
     /*  Phrase 1a :
         Member generate a proposal ID and send to acceptors*/
-    public void prepare() {
+    public void prepare() throws Exception {
         // clear all data that has received with earlier proposal(s) to restart a proposal
         this.promisesReceived = new ArrayList<>();
         this.proposals = new HashMap<>();  //l
         this.acceptors = new HashMap<>();  //l
-        this.proposalMSG.generateProposalID();  // unique ID = time stamp + ID
+        this.proposalMSG.generateProposalID();  // create unique PID = last digits time stamp + ID
         ProposalMSG toSendMSG = new ProposalMSG(this.MID, this.proposalMSG.getPID(), null, "Prepare");
-        try {
-            printNice(" [ Start Phrase 1 ] ", " M" + this.MID + " Send Prepare Request to all members");
-//            System.out.print("\n[ Phrase 1 start ] :: \n[ 1a ] ");
-            broadcast(toSendMSG, "Prepare"); // send prepare(n) to all members include itself
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        broadcast(toSendMSG, "Prepare"); // send prepare(n) to all members include itself
     }
 
     protected synchronized void accept(Socket a_member_socket) {
@@ -149,11 +139,12 @@ public class fastByzantineMember extends Communication {
                     receiveFinal(inObject);
                     break;
                 default:
-                    System.out.println(">> M" + this.MID + "Error: Unknown MSG type!");
+                    System.out.println(">> M" + this.MID + "Error:: Unknown MSG type!");
             }
         } catch (Exception e) {
-            System.out.println(">> M" + this.MID + "Error in run accept");
-//            e.printStackTrace();
+
+            System.out.println(">> M" + this.MID + "Error:: in run accept");
+            e.printStackTrace();
         }
     }
 
@@ -162,38 +153,39 @@ public class fastByzantineMember extends Communication {
      if proposalID > max, reply accepted ID and accepted value
      otherwise ignore this prepare message
      */
-    public void receivePrepare(ProposalMSG proposalMSG) {
-        int proposerMID = proposalMSG.getMID();
-        if (maxProposalID == -1 || proposalMSG.getPID() > maxProposalID || this.promisedMSG == null) {
-            maxProposalID = proposalMSG.getPID();
-            // todo check?? sendPromise (acceptedPID, acceptedValue);
-            this.promisedMSG = new ProposalMSG(this.MID, maxProposalID, acceptedValue, "Promise");
-            System.out.printf("[ 1b ] Acceptor M%d:: send to -> M%d %s\n", this.MID, proposerMID,
-                    promisedMSG.getProposalMSG());
+    public void receivePrepare(ProposalMSG prepareMSG) {
+        int proposerMID = prepareMSG.getMID();
+        int proposerPID = prepareMSG.getPID();
+        // ProposalMSG previousID, Object acceptedValue
+        if (promisedMSG != null && proposerPID == maxProposalID) {  // duplicate message
+            System.out.println("[ 1b ] Duplicate prepare MSG");
             outMSG(proposerMID, promisedMSG);
-        } else if (proposalMSG.getPID() < maxProposalID) {
-            sendNah(proposerMID);//ignore the prepare request or being nice to return "Nah"
-//        }
-            // ProposalMSG previousID, Object acceptedValue
-//        else if (this.promisedMSG != null && proposalMSG.getPID()==maxProposalID) {  // duplicate message
-//            sendPromise(fromMID, this.promisedMSG);
-//            sendPromise(fromMID, proposalMSG, acceptedMSG, acceptedValue);
+        } else if (promisedMSG == null || proposerPID > maxProposalID) {
+            maxProposalID = proposerPID;  // update maxPID
+            promisedMSG = new ProposalMSG(MID, maxProposalID, acceptedValue, "Promise"); // create promisedMSG
+            System.out.printf("[ 1b ] Acceptor M%d:: send to -> M%d %s\n", MID, proposerMID, promisedMSG.getProposalMSG());
+            outMSG(proposerMID, promisedMSG);
+        } else if (proposerPID < maxProposalID) {
+            // ignore the prepare request or being nice to return "Nah"
+            // System.out.printf("[ 1b ] Acceptor M%d:: send Nah Nah Nah Nah -> M%d \n", this.MID, proposerMID);
+            ProposalMSG nah = new ProposalMSG(MID, maxProposalID, null, "Nah");
+            outMSG(proposerMID, nah);
         } else {
-            System.out.println("Empty case in receive Prepare");
+            System.out.println("[ 1b ] Error:: Empty case in receive Prepare");
         }
     }
 
     /* phrase 2a : If a Proposer receives a majority of Promises from Acceptors,
      * it will set value to its proposal and send an Accept message (pid, V).
      */
-    public void receivePromise(ProposalMSG promiseMSG) {
+    public void receivePromise(ProposalMSG receivedMSG) {
 //        System.out.println("\n [ Receive a promise ] :: " + promiseMSG.getProposalMSG());
-        int acceptorMID = promiseMSG.getMID();
-        int prevAcceptedPID = promiseMSG.getPID();
-        Object prevAcceptedValue = promiseMSG.getValue();
+        int acceptorMID = receivedMSG.getMID();
+        int receivedPID = receivedMSG.getPID();
+        Object receivedValue = receivedMSG.getValue();
 //        if (isComplete()) return;
-        // return if receives from itself or already received
-        if (promiseMSG.equals(this.proposalMSG) || promisesReceived.contains(acceptorMID)) {
+        // return if already received
+        if (promisesReceived.contains(acceptorMID)) { // || receivedMSG.equals(this.proposalMSG)
             System.out.println("~~~~~ Duplicate promise & return ~~~~~");
             return;
         }
@@ -202,28 +194,23 @@ public class fastByzantineMember extends Communication {
 //        System.out.printf("[ 1b.2 ] Proposer M%d:: <- Receive %s \t( M%d ::Total %d Promise)\n", this.MID,
 //                promiseMSG.getProposalMSG(), this.MID, promisesReceived.size());
 
-        if (lastAcceptedMSG == null || promiseMSG.getPID() > lastAcceptedMSG.getPID()) {
-            lastAcceptedMSG = promiseMSG;
-            maxProposalID = prevAcceptedPID;
-            System.out.println("[ Update ] new PID found & set -> lastAcceptedMSG " + lastAcceptedMSG.getProposalMSG());
-
-            if (prevAcceptedValue != null)
-                this.proposalMSG.setValue(prevAcceptedValue);  // change this value to inMSG.value
+        if (receivedPID > lastPromisedPID) { // update PID and accepted value
+            lastPromisedPID = receivedPID;
+            if (receivedValue != null) {
+                this.proposalMSG.setValue(receivedValue);
+                System.out.println("[ 1b -> Update ] Proposer M" + this.MID + " found new PID & set value -> " + proposalMSG.getValue());
+            } else {
+                System.out.printf("[ 1b -> Update ] Proposer M%d found new PID -> %s from M%d\n", MID, lastPromisedPID,
+                        acceptorMID);
+            }
         }
 
         if (promisesReceived.size() == majority) {
-            printNice(" [ Start Phrase 2 ] ", " M" + this.MID + " has Received Majority Promises ( "
-                    + promisesReceived.size() + " )\n Send Accept Request to all members");
-//            if (lastAcceptedMSG.getValue() != null)
-//                this.proposalMSG.setValue(lastAcceptedMSG.getValue());
             if (this.proposalMSG.getValue() != null) {
                 try {
                     broadcast(this.proposalMSG, "Accept"); // broadcast proposalMSG (PID,V) to all
                 } catch (Exception e) {
                     e.printStackTrace();
-                } finally {
-                    System.out.printf("\n************ End :: M%s :: sent Accept Request to all ***************\n\n",
-                            this.MID);
                 }
             }
         }
@@ -234,21 +221,30 @@ public class fastByzantineMember extends Communication {
      * otherwise return maxPID
      */
     public void receiveAccept(ProposalMSG acceptRequestMSG) {
-        int proposerMID = acceptRequestMSG.getMID();
-        System.out.printf("[ 2a ] M%d receive %s \n", this.MID, acceptRequestMSG.getProposalMSG());
-        // todo check??
-        if (promisedMSG == null || acceptRequestMSG.getPID() >= maxProposalID) {
-            if (maxProposalID > acceptRequestMSG.getPID()) {
-                maxProposalID = acceptRequestMSG.getPID();
-                System.out.println("[ Update ] maxProposalID = " + maxProposalID);
-            }
-            acceptedValue = acceptRequestMSG.getValue();
-            this.promisedMSG = new ProposalMSG(this.MID, maxProposalID, acceptedValue, "Promise");
-            this.acceptedMSG = new ProposalMSG(this.MID, maxProposalID, acceptedValue, "Accepted");
-            saveToLocalData(acceptedMSG.getValue());  // save to local file
-        } else {
-            this.acceptedMSG = new ProposalMSG(this.MID, maxProposalID, null, "Accepted"); // todo
+        if (acceptRequestMSG.getValue() == null) {
+            System.out.println("Error: in receive Accept" + acceptRequestMSG.getProposalMSG());
+            return;
         }
+
+        int proposerMID = acceptRequestMSG.getMID();
+        int proposerPID = acceptRequestMSG.getPID();
+        Object proposerValue = acceptRequestMSG.getValue();
+        if (promisedMSG == null || proposerPID >= maxProposalID) {
+            if (proposerPID > maxProposalID) {
+                maxProposalID = proposerPID;
+                System.out.printf("< 2a Update > M%d Found maxProposalID in accept(PID: %d)\n", MID, maxProposalID);
+
+            }
+            acceptedValue = proposerValue;
+            promisedMSG = new ProposalMSG(MID, maxProposalID, acceptedValue, "Promise"); // update promisedMSG
+            acceptedMSG = new ProposalMSG(MID, maxProposalID, acceptedValue, "Accepted");
+            saveToLocalData(acceptedMSG.getValue());  // save to local file
+        }
+        // return macPID only to proposer because proposerPID is smaller than maxPID
+        else {
+            acceptedMSG = new ProposalMSG(MID, maxProposalID, null, "Accepted");
+        }
+        System.out.printf("[ 2a ] M%d send %s to M%d\n", MID, acceptedMSG.getProposalMSG(), proposerMID);
         outMSG(proposerMID, acceptedMSG);  // send accepted MSG to proposer
     }
 
@@ -256,16 +252,18 @@ public class fastByzantineMember extends Communication {
     register AcceptMSG.V -> acceptedValue & send  AcceptedMSG to the Proposer (Learner)
     Else ignore.*/
     public void receiveAccepted(ProposalMSG acceptedMSG) throws Exception {
-        if (isComplete()) return;
+        if (isComplete())
+            return;
+
         int acceptorMID = acceptedMSG.getMID();
         int acceptorPID = acceptedMSG.getPID();
         Object acceptedValue = acceptedMSG.getValue();
 
         ProposalMSG oldMID = acceptors.get(acceptorMID);
 
-        // if duplicate msg or smaller PID -> ignore
-        if (oldMID != null && acceptedMSG.getPID() <= oldMID.getPID()) return;
-
+        // if duplicate msg or smaller PID means outdated MSG -> ignore
+        if (oldMID != null && acceptorPID <= oldMID.getPID()) return;
+//        else if (acceptedValue == null) return;
         else acceptors.put(acceptorMID, acceptedMSG);
 
         /*// delete this duplicate msg from proposals map
@@ -283,22 +281,36 @@ public class fastByzantineMember extends Communication {
         thisProposal.acceptCount +=1;
         thisProposal.retentionCount +=1;*/
 
-        System.out.println("[ 2b ] M" + this.MID + " receive Accepted total number - " + acceptors.size());
-//        if (thisProposal.acceptCount +1 == majority ) { //todo check
-        if (acceptors.size() == majority) {
-            System.out.printf("*************** M%d has received Enough Accepted (%d)!! ************ \n", this.MID,
-                    acceptedValue, acceptors.size());
+        if (acceptedValue != null) acceptCount++;
+        System.out.println("[ 2b ] M" + this.MID + " receive Accepted from M" + acceptedMSG.getMID() + " -> total " +
+                "number - " + acceptors.size() + " >> " + acceptCount);
 
-            if (acceptorPID > this.proposalMSG.getPID()) {
-                printNice("Go back to [ Phrase 1 ]", "M" + this.MID + " Found larger PID \n"
-                        + "M" + acceptorPID + " will generate a new Proposal ");
-                prepare();
-                return;
+        if (acceptors.size() == majority) {
+            System.out.printf("\n******** M%d has received Enough Accepted (%d) for Value %s !! ********\n\n", MID, acceptors.size(), acceptedValue);
+            // check PID in acceptors
+            int max = 0;
+            int temp;
+            for (int i = 0; i < acceptors.size(); i++) {
+                if (acceptors.containsKey(i)) {
+                    temp = acceptors.get(i).getPID();
+                    System.out.println(MID + " for each acceptor PID -> " + temp);
+                    if (temp > max) {
+                        max = temp;
+                    }
+                }
+            }
+            System.out.println(MID + "find max PID in acceptor " + max);
+            if (max > this.proposalMSG.getPID()) {
+//            if (acceptorPID > this.proposalMSG.getPID()) {
+                if (!isByzantine) {
+                    printNice(" M" + MID + " Go back to [ Phrase 1 ] ", "Found larger PID in accepted MSG\nwill generate a new Proposal ");
+                    prepare();
+                }
             } else {
                 printNice(" [ Start Learn ] ", " M" + this.MID + " has Received Majority Accepted ( "
                         + promisesReceived.size() + " )\n Send Final Agreement to all members");
-                finalValue = acceptedValue;
-                finalProposalMSG = new ProposalMSG(this.MID, acceptedMSG.getPID(), acceptedValue, "Final");
+                finalValue = promisedMSG.getValue();
+                finalProposalMSG = new ProposalMSG(this.MID, proposalMSG.getPID(), finalValue, "Final");
                 proposals.clear();
                 acceptors.clear();
                 finalAgreement(finalProposalMSG);  // acceptedValue
@@ -306,18 +318,13 @@ public class fastByzantineMember extends Communication {
         }
     }
 
-    private void sendNah(int toMID) {
-        ProposalMSG nah = new ProposalMSG(this.MID, -1, null, "Nah");
-        outMSG(toMID, nah);
-    }
-
-    private void receiveNah(ProposalMSG obj) {
-        int fromMID = obj.getMID();
-        System.out.println(">> M" + this.MID + " receive Nah Nah Nah Nah Nah Nah Nah from M" + fromMID);
-        // todo go back to stage 1
+    private void receiveNah(ProposalMSG obj) throws Exception {
+//        System.out.println(">> M" + this.MID + " receive Nah Nah Nah Nah from M" + obj.getMID()
+//                + " maxPID: " + obj.getPID() + " & my PID: " + this.proposalMSG.getPID());
         nahCount += 1;
-        if (nahCount == majority) {
-            System.out.println("M" + this.MID + "will go back to [ Phrase 1 ] to generate a new ProposalID");
+        if (nahCount == majority && !isByzantine) {
+            System.out.println("=".repeat(40) + "\nM" + this.MID + " receives 5 nah nah nah nah nah & will go back to [" +
+                    " Phrase 1 ]\n Send a new prepare request with new ProposalID\n" + "=".repeat(40));
             nahCount = 0; // reset nah count
             prepare();
         }
@@ -342,7 +349,7 @@ public class fastByzantineMember extends Communication {
 
     protected void receiveFinal(ProposalMSG inObject) throws IOException {
         if (isDone) return;
-        System.out.println(">> Final :: M" + MID + " receive Final Message ( Save data to local file )");
+//        System.out.println(">> Final :: M" + MID + " receive Final Message ( Save data to local file )");
         saveToLocalData(inObject.getValue());
         finalResult();
         isDone = true;
@@ -353,16 +360,18 @@ public class fastByzantineMember extends Communication {
     public void broadcast(ProposalMSG proposalMSG, String type) throws Exception {
         ProposalMSG toSendMSG = new ProposalMSG(this.MID, proposalMSG.getPID(), proposalMSG.getValue(), type);
         if (type.equals("Prepare")) {
-            System.out.println("\n[ Phrase Prepare ] M" + this.MID + " Broadcast " + proposalMSG.getProposalMSG());
+            printNice(" [ 1a ] M" + this.MID + " Start Phrase 1 - Prepare() ",
+                    " Broadcast " + proposalMSG.getProposalMSG() + " to all members");
         } else if (type.equals("Accept")) {
-            System.out.println("\n[ Phrase Accept ] M" + this.MID + " Broadcast " + proposalMSG.getProposalMSG());
+            printNice(" [ 2a ] M" + this.MID + " Start Phrase 2 - Accept() ", " M" + this.MID
+                    + " has Received Majority Promises ( " + promisesReceived.size() + " )\n Send Accept Request "
+                    + proposalMSG.getProposalMSG() + " to all members");
         }
 
         for (int i = 1; i <= 9; i++) {
             outMSG(i, toSendMSG);
         }
-//        if (type.equals("Final"))
-//            finalResultOutput();
+//        if (type.equals("Final"))  finalResultOutput();
     }
 
     public boolean isComplete() {
@@ -427,13 +436,11 @@ public class fastByzantineMember extends Communication {
     }
 
     public void finalResult() throws IOException {
-
-        String output = ">> [ Paxos End ] Data saved in M" + this.MID + ": ";
         String content = readLocalData(this.MID + "data.txt");
         if (content.isEmpty()) {
             content = "N/A    ( Possible lost connection with this member )\n";
         }
-        System.out.println(output + content);
+        System.out.println(">> [ Paxos End ] Data saved in M" + this.MID + ": " + content);
     }
 
     public void finalResultOutput() throws IOException {
@@ -449,9 +456,9 @@ public class fastByzantineMember extends Communication {
             }
         }
         if (checkPaxosResults(check)) {
-            printNice(" Paxos Works! Output: ", output);
+            printNice(" M" + MID + " :: Paxos Works! Output: ", output);
         } else
-            printNice(" Paxos failed! Output: ", output);
+            printNice(" M" + MID + " :: Paxos failed! Output: ", output);
     }
 
     public boolean checkPaxosResults(LinkedList<String> check) {

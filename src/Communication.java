@@ -28,12 +28,11 @@ public class Communication {
                 socket = new Socket(host, acceptorIP);
                 break;
             } catch (Exception e) {
-                System.out.println(">> Connection to M" + toMID + " failed. Will retry in 3s. Retry " + count_try);
-                Thread.sleep(3000);
+                if (toMID!=1)
+                    System.out.println(">> Connection to M" + toMID + " failed. Will retry in 2s. Retry " + count_try);
+                Thread.sleep(2000);
             }
         }
-        if (count_try == 5)
-            System.out.println(">> Connection is failed. M" + toMID + " is offline\n" + "*".repeat(40));
         return socket;
     }
 

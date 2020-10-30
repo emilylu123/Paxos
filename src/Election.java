@@ -93,9 +93,9 @@ public class Election {
     }
 
     protected void doRandom() {
-        goOffline();
-//        random(M2);
-//        random(M3);
+//        goOffline();
+        random(M2);
+        random(M3);
         random(M4);
         random(M5);
         random(M6);
@@ -126,5 +126,9 @@ public class Election {
                 System.out.println(">> Random:: M" + member.MID + " - never response " + random);
                 break;
         }
+    }
+
+    protected void doByzantine() {
+        System.out.println("Under construction...");
     }
 }

@@ -456,9 +456,9 @@ public class Member extends Communication {
             }
         }
         if (checkPaxosResults(check)) {
-            printNice(" Paxos Works! Output: ", output);
+            printNice(" M" + MID + " :: Paxos Works! Output: ", output);
         } else
-            printNice(" Paxos failed! Output: ", output);
+            printNice(" M" + MID + " :: Paxos failed! Output: ", output);
     }
 
     public boolean checkPaxosResults(LinkedList<String> check) {

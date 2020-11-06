@@ -18,11 +18,10 @@ import java.util.List;
 public class Member extends Communication {
     protected final int majority = 9 / 2 + 1;
     protected int MID; //memberID 1-9
-    protected ProposalMSG proposalMSG = null; //p
+    protected ProposalMSG proposalMSG; //p
     protected int lastPromisedPID = -1; //p
     protected int acceptCount = 0;
     protected int nahCount = 0;
-    //    protected int retentionCount = 0;
     protected int maxProposalID = -1;
     protected Object acceptedValue = null; //a
     protected ProposalMSG promisedMSG = null; //a
@@ -35,9 +34,8 @@ public class Member extends Communication {
     protected Socket socket;
     protected ServerSocket server;
     protected int localport;
-    protected String backupPath = "";
+    protected String backupPath;
     protected boolean isOffline = false;   // to simulate M2 M3 random go offline
-    protected boolean isByzantine = false;  // for Byzantine's algorithm
     protected boolean isDone = false;
     protected int randomResponse = 0;
 
@@ -49,12 +47,6 @@ public class Member extends Communication {
         this.localport = MID * 1111;  // number * 1111
     }
 
-//    Member(int acceptCount, int retentionCount, Object acceptedValue) {
-//        this.acceptCount = acceptCount;
-//        this.retentionCount = retentionCount;
-//        this.acceptedValue = acceptedValue;
-//    }
-
     void connecting() {
         cleanCloseSocket();  // close previous connection if any
         deleteBackup();
@@ -64,36 +56,30 @@ public class Member extends Communication {
             server = new ServerSocket(this.localport);
 //            System.out.printf("<<<<< Socket M%d is ready:: %s >>>>>\n", this.MID, server.isBound());
             do {
+                socket = server.accept();
                  /* below parts will simulate random behaviors
                  1 isOffline -> M2, M3 goes offline
                  2 isRandom -> M4~M9 random response times: immediate;  medium; late; never
-                 3 isByzantine -> lie, collude, or intentionally do not participate (fast Byzantine)
                  */
                 if (isOffline) {
-                    server.close();
+                    cleanCloseSocket();
                     printNice(" Warning:: ", "       M" + this.MID + " is offline");
                     break;
                 }
                 // immediate;  medium; late; never
-                if (randomResponse == 0) {   // immediately response as normal
-                } else if (randomResponse == 1) {  // medium response
-                    Thread.sleep(1000);
+                if (randomResponse == 1) {  // medium response
+                    Thread.sleep(2000);
                 } else if (randomResponse == 2) { // late response
-                    Thread.sleep(3000);
-                } else { // never response
-                    socket.close();
+                    Thread.sleep(4000);}
+                else if (randomResponse != 0) { // never response
+                    cleanCloseSocket();
                     printNice(" Warning:: ", "       M" + this.MID + " is never response");
+                    break;
                 }
-                if (isByzantine) {
-                    printNice(" Warning:: ", "       M" + this.MID + " will behave crazy (Fast Byzantine)");
-                    // todo fast Byzantine
-                }
-                socket = server.accept();
                 accept(socket);
             } while (!isDone);
             if (this.MID == 1 || this.randomResponse == 1 || this.randomResponse == 2)
                 finalResultOutput();
-//            System.out.println("M" + this.MID + " is offline." + this.socket.isClosed() + this.socket.isConnected());
         } catch (Exception e) {
             System.out.println("Error in Server Socket connection for M" + this.MID);
         }
@@ -101,7 +87,7 @@ public class Member extends Communication {
 
     /*  Phrase 1a :
         Member generate a proposal ID and send to acceptors*/
-    public void prepare() throws Exception {
+    public void prepare() {
         // clear all data that has received with earlier proposal(s) to restart a proposal
         this.promisesReceived = new ArrayList<>();
         this.proposals = new HashMap<>();  //l
@@ -112,6 +98,7 @@ public class Member extends Communication {
     }
 
     protected synchronized void accept(Socket a_member_socket) {
+        if (a_member_socket == null) return;
         try {
             ProposalMSG inObject = inMSG(a_member_socket);
             String type = inObject.getType();
@@ -132,9 +119,6 @@ public class Member extends Communication {
                 case "Nah":
                     receiveNah(inObject);
                     break;
-                case "Whatever":
-                    receiveWhatever(inObject);
-                    break;
                 case "Final":
                     receiveFinal(inObject);
                     break;
@@ -142,7 +126,6 @@ public class Member extends Communication {
                     System.out.println(">> M" + this.MID + "Error:: Unknown MSG type!");
             }
         } catch (Exception e) {
-
             System.out.println(">> M" + this.MID + "Error:: in run accept");
             e.printStackTrace();
         }
@@ -165,13 +148,10 @@ public class Member extends Communication {
             promisedMSG = new ProposalMSG(MID, maxProposalID, acceptedValue, "Promise"); // create promisedMSG
             System.out.printf("[ 1b ] Acceptor M%d:: send to -> M%d %s\n", MID, proposerMID, promisedMSG.getProposalMSG());
             outMSG(proposerMID, promisedMSG);
-        } else if (proposerPID < maxProposalID) {
+        } else {
             // ignore the prepare request or being nice to return "Nah"
-            // System.out.printf("[ 1b ] Acceptor M%d:: send Nah Nah Nah Nah -> M%d \n", this.MID, proposerMID);
             ProposalMSG nah = new ProposalMSG(MID, maxProposalID, null, "Nah");
             outMSG(proposerMID, nah);
-        } else {
-            System.out.println("[ 1b ] Error:: Empty case in receive Prepare");
         }
     }
 
@@ -183,7 +163,6 @@ public class Member extends Communication {
         int acceptorMID = receivedMSG.getMID();
         int receivedPID = receivedMSG.getPID();
         Object receivedValue = receivedMSG.getValue();
-//        if (isComplete()) return;
         // return if already received
         if (promisesReceived.contains(acceptorMID)) { // || receivedMSG.equals(this.proposalMSG)
             System.out.println("~~~~~ Duplicate promise & return ~~~~~");
@@ -191,8 +170,6 @@ public class Member extends Communication {
         }
         // add memberID to promises received collection
         promisesReceived.add(acceptorMID);
-//        System.out.printf("[ 1b.2 ] Proposer M%d:: <- Receive %s \t( M%d ::Total %d Promise)\n", this.MID,
-//                promiseMSG.getProposalMSG(), this.MID, promisesReceived.size());
 
         if (receivedPID > lastPromisedPID) { // update PID and accepted value
             lastPromisedPID = receivedPID;
@@ -233,7 +210,6 @@ public class Member extends Communication {
             if (proposerPID > maxProposalID) {
                 maxProposalID = proposerPID;
                 System.out.printf("< 2a Update > M%d Found maxProposalID in accept(PID: %d)\n", MID, maxProposalID);
-
             }
             acceptedValue = proposerValue;
             promisedMSG = new ProposalMSG(MID, maxProposalID, acceptedValue, "Promise"); // update promisedMSG
@@ -252,36 +228,21 @@ public class Member extends Communication {
     register AcceptMSG.V -> acceptedValue & send  AcceptedMSG to the Proposer (Learner)
     Else ignore.*/
     public void receiveAccepted(ProposalMSG acceptedMSG) throws Exception {
-        if (isComplete())
-            return;
+        if (isComplete()) return;
 
         int acceptorMID = acceptedMSG.getMID();
         int acceptorPID = acceptedMSG.getPID();
         Object acceptedValue = acceptedMSG.getValue();
 
-        ProposalMSG oldMID = acceptors.get(acceptorMID);
 
         // if duplicate msg or smaller PID means outdated MSG -> ignore
+        ProposalMSG oldMID = acceptors.get(acceptorMID);
         if (oldMID != null && acceptorPID <= oldMID.getPID()) return;
-//        else if (acceptedValue == null) return;
-        else acceptors.put(acceptorMID, acceptedMSG);
 
-        /*// delete this duplicate msg from proposals map
-        if (oldMID != null) {
-            Member oldProposal = proposals.get(oldMID);
-            oldProposal.retentionCount -= 1;
-            if (oldProposal.retentionCount == 0)
-                proposals.remove(oldMID);
-        }
+        acceptors.put(acceptorMID, acceptedMSG);
 
-        if (!proposals.containsKey(acceptedMSG))  // if unique (not in proposal)
-            proposals.put(acceptedMSG, new Member(0, 0, acceptedValue));
+        if (acceptedValue != null)  acceptCount++;
 
-        Member thisProposal = proposals.get(acceptedMSG);
-        thisProposal.acceptCount +=1;
-        thisProposal.retentionCount +=1;*/
-
-        if (acceptedValue != null) acceptCount++;
         System.out.println("[ 2b ] M" + this.MID + " receive Accepted from M" + acceptedMSG.getMID() + " -> total " +
                 "number - " + acceptors.size() + " >> " + acceptCount);
 
@@ -301,11 +262,8 @@ public class Member extends Communication {
             }
             System.out.println(MID + "find max PID in acceptor " + max);
             if (max > this.proposalMSG.getPID()) {
-//            if (acceptorPID > this.proposalMSG.getPID()) {
-                if (!isByzantine) {
-                    printNice(" M" + MID + " Go back to [ Phrase 1 ] ", "Found larger PID in accepted MSG\nwill generate a new Proposal ");
-                    prepare();
-                }
+                printNice(" M" + MID + " Go back to [ Phrase 1 ] ", "Found larger PID in accepted MSG\nwill generate a new Proposal ");
+                prepare();
             } else {
                 printNice(" [ Start Learn ] ", " M" + this.MID + " has Received Majority Accepted ( "
                         + promisesReceived.size() + " )\n Send Final Agreement to all members");
@@ -313,43 +271,28 @@ public class Member extends Communication {
                 finalProposalMSG = new ProposalMSG(this.MID, proposalMSG.getPID(), finalValue, "Final");
                 proposals.clear();
                 acceptors.clear();
-                finalAgreement(finalProposalMSG);  // acceptedValue
+                finalAgreement(finalProposalMSG);
             }
         }
     }
 
     private void receiveNah(ProposalMSG obj) throws Exception {
-//        System.out.println(">> M" + this.MID + " receive Nah Nah Nah Nah from M" + obj.getMID()
-//                + " maxPID: " + obj.getPID() + " & my PID: " + this.proposalMSG.getPID());
         nahCount += 1;
-        if (nahCount == majority && !isByzantine) {
+        if (nahCount == majority) {
             System.out.println("=".repeat(40) + "\nM" + this.MID + " receives 5 nah nah nah nah nah & will go back to [" +
                     " Phrase 1 ]\n Send a new prepare request with new ProposalID\n" + "=".repeat(40));
             nahCount = 0; // reset nah count
             prepare();
         }
-//        if (isByzantine) sendWhatever(fromMID);
-    }
-
-    private void sendWhatever(int toMID) {
-        System.out.println(">> M" + this.MID + " say Whatever ~ Whatever ~ Whatever ~ to M" + toMID);
-        ProposalMSG whatever = new ProposalMSG(this.MID, -1, null, "Whatever");
-        outMSG(toMID, whatever);
-    }
-
-    private void receiveWhatever(ProposalMSG inObject) {
-        System.out.println("in receiver whatever (todo)");
     }
 
     private void finalAgreement(ProposalMSG proposalMSG) throws Exception {
         System.out.println("\n******** Agreement on Final value -> " + proposalMSG.getProposalMSG() + "********\n");
         broadcast(proposalMSG, "Final");
-//        finalResultOutput();
     }
 
     protected void receiveFinal(ProposalMSG inObject) throws IOException {
         if (isDone) return;
-//        System.out.println(">> Final :: M" + MID + " receive Final Message ( Save data to local file )");
         saveToLocalData(inObject.getValue());
         finalResult();
         isDone = true;
@@ -357,7 +300,7 @@ public class Member extends Communication {
     }
 
     // final value
-    public void broadcast(ProposalMSG proposalMSG, String type) throws Exception {
+    public void broadcast(ProposalMSG proposalMSG, String type) {
         ProposalMSG toSendMSG = new ProposalMSG(this.MID, proposalMSG.getPID(), proposalMSG.getValue(), type);
         if (type.equals("Prepare")) {
             printNice(" [ 1a ] M" + this.MID + " Start Phrase 1 - Prepare() ",
@@ -371,7 +314,6 @@ public class Member extends Communication {
         for (int i = 1; i <= 9; i++) {
             outMSG(i, toSendMSG);
         }
-//        if (type.equals("Final"))  finalResultOutput();
     }
 
     public boolean isComplete() {
@@ -419,8 +361,6 @@ public class Member extends Communication {
         String content = "";
         if (!file.exists()) {
             file.createNewFile();
-        } else if (file.exists() && file.length() == 0) {
-//            System.out.println("Reading... Local File is EMPTY.");
         } else if (file.exists() && file.length() != 0) {
 //            System.out.println("Reading Proposal from local file " + FILE_TO_RECOVER);
             content = "";
@@ -456,9 +396,9 @@ public class Member extends Communication {
             }
         }
         if (checkPaxosResults(check)) {
-            printNice(" M" + MID + " :: Paxos Works! Output: ", output);
+            printNice(" M" + MID + " :: Output: ", "Test Result : << PASS >>\n\n" + output);
         } else
-            printNice(" M" + MID + " :: Paxos failed! Output: ", output);
+            printNice(" M" + MID + " :: Output: ", "Test Result : << FAIL >>\n\n" + output);
     }
 
     public boolean checkPaxosResults(LinkedList<String> check) {

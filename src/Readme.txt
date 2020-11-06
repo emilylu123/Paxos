@@ -17,24 +17,26 @@ The test file is named as "TesterMultiNormal", "TesterMultiWithOffline", "Tester
 1. Compile
     Console Command: javac *.java
 
-2. Run Tester Multiple Proposers without failure
+2. Run Tester Paxos without failure
 	Console Command: java TesterMultiNormal
 	This test will simulate the case that M1 M2 M3 to propose at the same time,
 	and M1-M9 have immediate response.
 
-3. Run Tester Multiple Proposers with M2 / M3 goes offline
+3. Run Tester Paxos with offline
 	Console Command: java TesterMultiWithOffline
 	This test will simulate the case that M1 M2 M3 to propose at the same time,
-	M1-M9 have immediate response, and M2 or M3 stop response after proposing.
+	M1-M9 have random response time, and M2 or M3 stop response after proposing.
 
-
-4. Run Tester Multiple Proposers with M2 / M3 goes offline, M4-M9 have random response times [bonus]
-	Console Command: java TesterMultiWithRandom
+4. Run Tester Paxos with random response times [bonus]
+	Console Command: java TesterBonusRandom
 	This test will simulate the case that M1 M2 M3 to propose at the same time,
 	M4-M9 have random response time, and M2 or M3 stop response after proposing.
 
-5. Run Fast Byzantine Pax's [bonus]
-	Console Command: ...
+5. Run Fast Paxos [bonus]
+	Console Command: java TesterBonusFastPaxos
+
+6. Run Fast Byzantine (under construction...) [bonus]
+	Console Command: java TesterBonusByzantine
 	This test will simulate the case that M1 M2 M3 to propose at the same time,
 	M4-M9 have random response time and will lie collude, or intentionally 
 	do not participate in some voting queries.
@@ -49,7 +51,7 @@ Basic functionality:
 when M2 or M3 propose and then go offline [TesterMultiWithOffline - 30pts]
 
 Bonus functionality:
-√? Paxos implementation works with a number ‘n’ of councillors with four profiles of response times:
+√ Paxos implementation works with a number ‘n’ of councillors with four profiles of response times:
     immediate;  medium; late; never.  [TesterMultiWithRandom - 10pts]
     (still a little buggy - Paxos does not stop properly)
 

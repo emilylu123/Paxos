@@ -36,11 +36,11 @@ public class ProposalMSG implements Serializable {
         else this.value = new Random().nextInt(3) + 1;
     }
 
-    // generate unique PID = current time stamp (8th digits ~ end) + 1 digit of random number +MemberID
+    // generate unique PID = current time stamp (7th digits ~ end) + 1 digit of random number +MemberID
     public void generateProposalID() {
         int ran = new Random().nextInt(9) + 1;
         String timeStamp = new Date().getTime() + Integer.toString(ran * 10 + this.MID);
-        this.PID = Integer.parseInt(timeStamp.substring(8));
+        this.PID = Integer.parseInt(timeStamp.substring(7));
     }
 
     @Override

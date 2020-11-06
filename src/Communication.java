@@ -29,8 +29,8 @@ public class Communication {
                 break;
             } catch (Exception e) {
                 if (toMID!=1)
-                    System.out.println(">> Connection to M" + toMID + " failed. Will retry in 2s. Retry " + count_try);
-                Thread.sleep(2000);
+                    System.out.println(">> Connection to M" + toMID + " failed. Will retry in 1s. Retry " + count_try);
+                Thread.sleep(1000);
             }
         }
         return socket;
@@ -64,18 +64,5 @@ public class Communication {
             }
         }
         return inPID;
-    }
-
-    public static ObjectOutputStream getOOS(Socket socket) throws IOException {
-        if (socket != null && socket.isConnected()) {
-            return new ObjectOutputStream(socket.getOutputStream());
-        }
-        return null;
-    }
-
-    public static ObjectInputStream getOIS(Socket socket) throws IOException {
-        if (socket != null && socket.isConnected())
-            return new ObjectInputStream(socket.getInputStream());
-        return null;
     }
 }

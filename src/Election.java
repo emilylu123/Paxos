@@ -11,28 +11,19 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
-/*
-30 points – Paxos implementation works when M1 – M9 have responses to voting queries suggested by the profiles above,
-including when M2 or M3 propose and then go offline
-
-Bonus
-10 points – Paxos implementation works with a number ‘n’ of councilors with four profiles of response times:
-immediate;  medium; late; never
-50 points – (you can use these points in this assignment, or in any other subsequent assignment) –
-Fast Byzantine Paxos implementation that works when councilors lie, collude, or intentionally do not participate
-in some voting queries but participate in others.*/
 
 public class Election {
     protected static Member M1, M2, M3, M4, M5, M6, M7, M8, M9;
     protected static ArrayList<Member> council = new ArrayList<>();
 
-    //Start all servers
+    // Start all servers
     public void start() {
         cleanUp();  // delete backup files
         createMembers();
         startElection();
     }
 
+    // Create M1 - M9
     public void createMembers() {
         M1 = new Member(1);
         M2 = new Member(2);
@@ -65,6 +56,7 @@ public class Election {
         }).start();
     }
 
+    // clean up local files
     private void cleanUp() {
         try {
             System.out.println(">> Test Preparation:: Delete all local backup files.\n");
@@ -80,9 +72,10 @@ public class Election {
         }
     }
 
+    // randomly choose M2 or M3 going offline
     protected void goOffline() {
         int id = new Random().nextInt(2) + 2;
-        System.out.println(">> Offline :: M" + id + " will be offline after proposal");
+        System.out.println(">> Offline Warning :: M" + id + " will be offline after proposal");
         if (id == 2) {
             M2.isOffline = true;
             M2.randomResponse = 3;
@@ -92,10 +85,12 @@ public class Election {
         }
     }
 
-    protected void doRandom() {
-//        goOffline();
-        random(M2);
-        random(M3);
+    // isAll define if random response setting include M2 and M3
+    protected void doRandom(boolean isAll) {
+        if (isAll){
+            random(M2);
+            random(M3);
+        }
         random(M4);
         random(M5);
         random(M6);
@@ -104,6 +99,11 @@ public class Election {
         random(M9);
     }
 
+/*   random a integer between 0 - 5,
+     the possibility of late response and never response are both 1/6
+     the possibility of immediately response and medium response are both 1/3
+     so that the random test is less likely to have majority (5) failures.
+     */
     protected void random(Member member) {
         int random = new Random().nextInt(6);
         switch (random) {
@@ -128,7 +128,16 @@ public class Election {
         }
     }
 
+    // bonus function
     protected void doByzantine() {
         System.out.println("Under construction...");
+    }
+
+    // bonus function
+    public void setFastPaxos(){
+        System.out.println("Under construction...");
+        for (Member member : council) {
+
+        }
     }
 }

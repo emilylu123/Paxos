@@ -9,22 +9,21 @@
 
 This project demonstrates that how to implement consensus and voting protocols in the presence of failures of one or more of the participants.
 
-Three of automated testing are provided.
+5 automated testing are provided.
 
-The test file is named as "TesterMultiNormal", "TesterMultiWithOffline", "TesterMultiWithRandom"
+The test files are named as "TesterClassicNormal", "TesterMultiWithOffline", "TesterBonusRandom", "TesterBonusFastPaxos", "TesterBonusByzantine"
 
 //How to run tests
 1. Compile
     Console Command: javac *.java
 
 2. Run Test 1 :: Classic Paxos - No failure
-	Console Command: java TesterMultiNormal
-
+	Console Command: java TesterClassicNormal
 	1. Proposer: M1 - M3 proposes to all members at the same time;
         2. Acceptor: All members response immediately.
 
 3. Run Test 2 : Classic Paxos - with failure (Offline)
-       	Console Command: java TesterMultiWithOffline
+       	Console Command: java TesterClassicOffline
 	1. Proposer: M1 - M3 proposes to all members at the same time;
         2. Offline : M2 / M3 proposes and then goes offline;
         3. Acceptor: M4 - M9 has random response time: immediate; medium; late; never.
@@ -52,27 +51,27 @@ The test file is named as "TesterMultiNormal", "TesterMultiWithOffline", "Tester
 
 Checklist
 Basic functionality:
-√ Paxos implementation works when two councillors send voting proposals at the same time [1 TesterMultiNormal - 10pts]
+√ Paxos implementation works when two councillors send voting proposals at the same time [ Test 1 TesterClassicNormal - 10pts]
 
-√ Paxos implementation works in the case where all M1-M9 have immediate responses to voting queries [1 TesterMultiNormal - 30pts]
+√ Paxos implementation works in the case where all M1-M9 have immediate responses to voting queries [ Test 1 TesterClassicNormal - 30pts]
 
 √ Paxos implementation works when M1 – M9 have responses to voting queries suggested by the profiles above, including
-when M2 or M3 propose and then go offline [2 TesterMultiWithOffline - 30pts]
+when M2 or M3 propose and then go offline [ Test 2 TesterClassicOffline - 30pts]
 
 Bonus functionality:
-√ Paxos implementation works with a number ‘n’ of councillors with four profiles of response times: immediate;  medium; late; never.  [3 TesterMultiWithRandom - 10pts]
+√ Paxos implementation works with a number ‘n’ of councillors with four profiles of response times: immediate;  medium; late; never.  [ Test 3 TesterBonusRandom - 10pts]
 
 
-√ Fast Pax's implementation works [4 TesterBonusFastPaxos - (?)/50 points]
+√ Fast Pax's implementation works [ Test 4 TesterBonusFastPaxos - (?)/50 points]
 
 √ Fast Byzantine Paxos implementation that works when councillors lie, collude,
-    or intentionally do not participate in some voting queries but participate in others. [5 TesterByantine - 50 points]
+    or intentionally do not participate in some voting queries but participate in others. [ Test 5 TesterBonusByzantine - 50 points]
 
 The project has following files:
     Member : a class for councillor member to propose and accept using classic Paxos
     ProposalMSG : a class for proposal message, including memberID, proposalID, value, message typ, etc.
     Communication : a class for sending and receiving ProposalMSG object using socket
-    Election : a class to create threads to run M1-M9 members and make propose.
+    Election : a class to create threads to run M1-M9 members, set status, and make propose.
     
     MemberFast : a class for councillor member to propose and accept using fast Paxos and fast Byzantine Paxos
-    ElectionFast : a class to create threads to run M1-M9 members and make propose.
+    ElectionFast : a class to create threads to run M1-M9 fast members, set status, and make propose.

@@ -7,17 +7,13 @@
 // Assignment3: Paxos
 //=====================================
 
-import java.io.IOException;
-
-/* Single test to check if Paxos Algorithm works when multiple propose M1 M2 M3 proposal
-in the case where M2 or M3 will propose and then go offline
-*/
 public class TesterMultiWithOffline extends Election {
     public static void main(String[] args) {
-        System.out.println("======================================================");
-        System.out.println("Test 2 :: Multiple proposers with proposer being offline ");
-        System.out.println("This test will simulate the case that\n" +"M1 M2 M3 propose at the same time, " +
-                "M2/M3 propose and then go offline, \n"+ "and M4-M9 have random response.");
+        System.out.println("============= [ Test Description ] ===================");
+        System.out.println("Test 2 :: Classic Paxos - with failure (Offline)");
+        System.out.println("1. Proposer: M1 - M3 proposes to all members at the same time;");
+        System.out.println("2. Offline : M2 / M3 proposes and then goes offline;");
+        System.out.println("3. Acceptor: M4 - M9 has random response time: immediate; medium; late; never.");
         System.out.println("======================================================\n");
 
         Election test = new Election();
@@ -28,6 +24,7 @@ public class TesterMultiWithOffline extends Election {
 
         // randomly choose M2 or M3 go offline after making proposal
         test.goOffline();
+
         //let M4-M9 have random response time
         test.doRandom(false);
     }

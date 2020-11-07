@@ -7,13 +7,11 @@
 // Assignment3: Paxos
 //=====================================
 
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 public class Communication {
-
     protected static final int MAX_TRY = 3;
     protected static final String host = "0.0.0.0";
 
@@ -28,7 +26,7 @@ public class Communication {
                 socket = new Socket(host, acceptorIP);
                 break;
             } catch (Exception e) {
-                if (toMID!=1)
+                if (toMID != 1)
                     System.out.println(">> Connection to M" + toMID + " failed. Will retry in 1s. Retry " + count_try);
                 Thread.sleep(1000);
             }
@@ -52,7 +50,7 @@ public class Communication {
         return null;
     }
 
-    public static ProposalMSG inMSG(Socket socket) throws Exception {
+    public static ProposalMSG inMSG(Socket socket) {
         ObjectInputStream ois;
         ProposalMSG inPID = null;
         if (socket != null && socket.isConnected()) {

@@ -7,15 +7,12 @@
 // Assignment3: Paxos
 //=====================================
 
-/*Multiple test with failures to check if Paxos works
-when multiple councillors send voting proposals at the same time
-*/
 public class TesterMultiNormal extends Election {
     public static void main(String[] args) {
-        System.out.println("======================================================");
-        System.out.println("Test 1 :: Multiple proposers with immediate response");
-        System.out.println("This test will simulate the case that\n" +"M1 M2 M3 propose at the same time,\n" +
-                "and M1-M9 have immediate response.");
+        System.out.println("============= [ Test Description ] ===================");
+        System.out.println("Test 1 :: Classic Paxos - No failure");
+        System.out.println("1. Proposer: M1 - M3 proposes to all members at the same time;");
+        System.out.println("2. Acceptor: All members response immediately.");
         System.out.println("======================================================\n");
 
         Election test = new Election();

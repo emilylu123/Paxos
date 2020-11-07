@@ -17,8 +17,6 @@ public class MemberFast extends Communication {
     protected int MID; //memberID 1-9
     protected ProposalMSG proposalMSG = null; //p
     protected int lastPromisedPID = -1; //p
-    protected int acceptCount = 0;
-    protected int nahCount = 0;
     protected int maxProposalID = -1;
     protected Object acceptedValue = null; //a
     protected ProposalMSG promisedMSG = null; //a
@@ -27,7 +25,7 @@ public class MemberFast extends Communication {
     protected ProposalMSG finalProposalMSG = null; //l
     protected List<Integer> promisesReceived;
     protected HashMap<Integer, ProposalMSG> proposals;  //l
-    protected HashMap<Integer, ProposalMSG> acceptors;  //l
+    protected ArrayList<ProposalMSG> acceptorList;
     protected Socket socket;
     protected ServerSocket server;
     protected int localport;
@@ -35,7 +33,6 @@ public class MemberFast extends Communication {
     protected boolean isOffline = false;   // to simulate M2 M3 random go offline
     protected boolean isByzantine = false;  // for Byzantine's algorithm
     protected boolean isDone = false;
-    protected boolean isLeader = false;
     protected int randomResponse = 0;
 
     // M1, M2, M3 will proposal for themselves, M4-M9 will randomly choose one from M1-M3 as proposal value
@@ -53,7 +50,6 @@ public class MemberFast extends Communication {
             // fault tolerance: read file and recover
             readLocalData(backupPath);
             server = new ServerSocket(this.localport);
-//            System.out.printf("<<<<< Socket M%d is ready:: %s >>>>>\n", this.MID, server.isBound());
             do {
                 socket = server.accept();
                  /* below parts will simulate random behaviors
@@ -71,16 +67,11 @@ public class MemberFast extends Communication {
                     Thread.sleep(1000);
                 } else if (randomResponse == 2) { // late response
                     Thread.sleep(3000);
-                } else if (randomResponse != 0){ // never response
+                } else if (randomResponse != 0) { // never response
                     socket.close();
                     printNice(" Warning:: ", "       M" + this.MID + " is never response");
                     break;
                 }
-                if (isByzantine) {
-                    printNice(" Warning:: ", "       M" + this.MID + " will behave crazy (Fast Byzantine)");
-                    // todo fast Byzantine
-                }
-
                 accept(socket);
             } while (!isDone);
             if (this.MID == 1 || this.randomResponse == 1 || this.randomResponse == 2)
@@ -96,11 +87,19 @@ public class MemberFast extends Communication {
         // clear all data that has received with earlier proposal(s) to restart a proposal
         this.promisesReceived = new ArrayList<>();
         this.proposals = new HashMap<>();  //l
-        this.acceptors = new HashMap<>();  //l
+        this.acceptorList = new ArrayList<>(); //l
         this.proposalMSG.generateProposalID();  // create unique PID = last digits time stamp + ID
         ProposalMSG toSendMSG = new ProposalMSG(this.MID, this.proposalMSG.getPID(), this.MID,
                 "PrepareToLeader");
-        outMSG(1,toSendMSG);
+        outMSG(1, toSendMSG);
+    }
+
+    public void receivePrepareToLeader(ProposalMSG in) throws Exception {
+        int id = in.getMID();
+        ProposalMSG prepareMSG = new ProposalMSG(in.getMID(), in.getPID(), null, "Prepare");
+        proposals.put(id, prepareMSG);
+        // clear all data that has received with earlier proposal(s) to restart a proposal
+        broadcast(prepareMSG, "Prepare");
     }
 
     protected synchronized void accept(Socket a_member_socket) {
@@ -124,33 +123,18 @@ public class MemberFast extends Communication {
                 case "Accepted":
                     receiveAccepted(inObject);
                     break;
-                case "Nah":
-                    receiveNah(inObject);
-                    break;
-                case "Whatever":
-                    receiveWhatever(inObject);
+                case "Check":
+                    receiveCheck(inObject);
                     break;
                 case "Final":
                     receiveFinal(inObject);
                     break;
                 default:
-                    System.out.println(">> M" + this.MID + "Error:: Unknown MSG type!");
+                    System.out.println(">> M" + this.MID + "Error:: Unknown MSG type! ");
             }
         } catch (Exception e) {
-            System.out.println(">> M" + this.MID + "Error:: in run accept");
-            e.printStackTrace();
+            System.out.println(">> M" + this.MID + "Error in accept loop");
         }
-    }
-
-
-    public void receivePrepareToLeader(ProposalMSG in) throws Exception {
-        int id = in.getMID();
-        ProposalMSG prepareMSG = new ProposalMSG(in.getMID(), in.getPID(), in.getValue(), "Prepare");
-//        if (!proposals.containsKey(id))  // if unique (not in proposal) put else replace value
-        proposals.put(id, prepareMSG);
-
-        // clear all data that has received with earlier proposal(s) to restart a proposal
-        broadcast(prepareMSG,"Prepare");
     }
 
     /*  phrase 1a : acceptor compare received proposalID and maxProposalID,
@@ -173,8 +157,8 @@ public class MemberFast extends Communication {
         } else if (proposerPID < maxProposalID) {
             // ignore the prepare request or being nice to return "Nah"
             // System.out.printf("[ 1b ] Acceptor M%d:: send Nah Nah Nah Nah -> M%d \n", this.MID, proposerMID);
-            ProposalMSG nah = new ProposalMSG(MID, maxProposalID, null, "Nah");
-            outMSG(1, nah);
+//            ProposalMSG nah = new ProposalMSG(MID, maxProposalID, null, "Nah");
+//            outMSG(1, nah);
         } else {
             System.out.println("[ 1b ] Error:: Empty case in receive Prepare");
         }
@@ -184,41 +168,35 @@ public class MemberFast extends Communication {
      * it will set value to its proposal and send an Accept message (pid, V).
      */
     public void receivePromise(ProposalMSG receivedMSG) {
-//        System.out.println("\n [ Receive a promise ] :: " + promiseMSG.getProposalMSG());
         int acceptorMID = receivedMSG.getMID();
         int receivedPID = receivedMSG.getPID();
         Object receivedValue = receivedMSG.getValue();
-        // return if already received
-//        if (promisesReceived.contains(acceptorMID)) { // || receivedMSG.equals(this.proposalMSG)
-//            System.out.println("~~~~~ Duplicate promise & return ~~~~~");
-//            return;
-//        }
+        boolean isValueChanged = false;
 
-        // add memberID to promises received collection
-        if (!promisesReceived.contains(acceptorMID))
-            promisesReceived.add(acceptorMID);
-//        System.out.printf("[ 1b.2 ] Proposer M%d:: <- Receive %s \t( M%d ::Total %d Promise)\n", this.MID,
-//                promiseMSG.getProposalMSG(), this.MID, promisesReceived.size());
         if (receivedPID > lastPromisedPID) { // update PID and accepted value
             lastPromisedPID = receivedPID;
+            promisesReceived.clear();
             this.proposalMSG.setPID(receivedPID);
-            if (receivedValue != null) {
+            if (receivedValue == null) { // fast paxos return "any"
+                int randomValue = new Random().nextInt(3) + 1;
+                printNice("[ Fast Paxos ]", "M" + this.MID + " submit ANY Value from proposals: " + randomValue);
+                this.proposalMSG.setValue(randomValue);
+            } else {
                 this.proposalMSG.setValue(receivedValue);
                 System.out.println("[ 1b -> Update ] Proposer M" + this.MID + " found new PID & set value -> " + proposalMSG.getValue());
             }
         }
 
-        if (receivedValue == null){ // fast paxos return "any"
-            int randomValue = new Random().nextInt(3) +1;
-            System.out.println("Random Value::" + randomValue);
-            this.proposalMSG.setValue(randomValue);
-        }
+        // add memberID to promises received collection
+        if (!promisesReceived.contains(acceptorMID))
+            promisesReceived.add(acceptorMID);
 
         if (promisesReceived.size() == majority) {
             try {
+                System.out.println("broadcast accept " + proposalMSG.getProposalMSG());
                 broadcast(this.proposalMSG, "Accept"); // broadcast proposalMSG (PID,V) to all
             } catch (Exception e) {
-                e.printStackTrace();
+                System.out.println("Error in send accept ");
             }
         }
     }
@@ -232,20 +210,29 @@ public class MemberFast extends Communication {
             System.out.println("Error: in receive Accept" + acceptRequestMSG.getProposalMSG());
             return;
         }
-
         int proposerMID = acceptRequestMSG.getMID();
         int proposerPID = acceptRequestMSG.getPID();
         Object proposerValue = acceptRequestMSG.getValue();
-        if (promisedMSG == null || proposerPID >= maxProposalID) {
+        if (promisedMSG == null || proposerPID >= maxProposalID || acceptedValue == null) {
             if (proposerPID > maxProposalID) {
                 maxProposalID = proposerPID;
                 System.out.printf("< 2a Update > M%d Found maxProposalID in accept(PID: %d)\n", MID, maxProposalID);
-
             }
             acceptedValue = proposerValue;
+
+            // do Byzantine cheating on purpose: change accepted value
+            if (isByzantine) {
+                int ran;
+                do {
+                    ran = new Random().nextInt(3) + 1;
+                }
+                while ((int) this.acceptedValue == ran);
+                printNice(" Warning:: Byzantine Traitor ",
+                        "   M" + this.MID + " will change accepted Value from " + acceptedValue + " to " + ran);
+                this.acceptedValue = ran;
+            }
             promisedMSG = new ProposalMSG(MID, maxProposalID, acceptedValue, "Promise"); // update promisedMSG
             acceptedMSG = new ProposalMSG(MID, maxProposalID, acceptedValue, "Accepted");
-            saveToLocalData(acceptedMSG.getValue());  // save to local file
         }
         // return macPID only to proposer because proposerPID is smaller than maxPID
         else {
@@ -259,84 +246,99 @@ public class MemberFast extends Communication {
     register AcceptMSG.V -> acceptedValue & send  AcceptedMSG to the Proposer (Learner)
     Else ignore.*/
     public void receiveAccepted(ProposalMSG acceptedMSG) throws Exception {
-        if (isComplete())
-            return;
-
+        if (isComplete()) return;
         int acceptorMID = acceptedMSG.getMID();
         int acceptorPID = acceptedMSG.getPID();
-        Object acceptedValue = acceptedMSG.getValue();
 
-        ProposalMSG oldMID = acceptors.get(acceptorMID);
-
+        ProposalMSG oldMID = null;
+//        ProposalMSG oldMID = acceptors.get(acceptorMID);
+        for (int i = 0; i < acceptorList.size(); i++) {
+            if (acceptorMID == acceptorList.get(i).getMID()) {
+                oldMID = acceptorList.get(i);
+                break;
+            }
+        }
         // if duplicate msg or smaller PID means outdated MSG -> ignore
         if (oldMID != null && acceptorPID <= oldMID.getPID()) return;
-//        else if (acceptedValue == null) return;
-        else acceptors.put(acceptorMID, acceptedMSG);
+        if (acceptedValue != null) {
+            acceptorList.add(acceptedMSG);
+            System.out.println("[ 2b ] M" + this.MID + " receive Accepted from M" + acceptedMSG.getMID() + " -> " +
+                    acceptedValue + " total number - " + acceptorList.size());
+        }
 
-        if (acceptedValue != null) acceptCount++;
-        System.out.println("[ 2b ] M" + this.MID + " receive Accepted from M" + acceptedMSG.getMID() + " -> total " +
-                "number - " + acceptors.size() + " >> " + acceptCount);
-
-        if (acceptors.size() == majority) {
-            System.out.printf("\n******** M%d has received Enough Accepted (%d) for Value %s !! ********\n\n", MID, acceptors.size(), acceptedValue);
+        if (acceptorList.size() == majority) {
+            System.out.printf("\n******** M%d has received Enough Accepted (%d) for Value %s !! ********\n\n", MID,
+                    acceptorList.size(), acceptedValue);
             // check PID in acceptors
             int max = 0;
             int temp;
-            for (int i = 0; i < acceptors.size(); i++) {
-                if (acceptors.containsKey(i)) {
-                    temp = acceptors.get(i).getPID();
-                    System.out.println(MID + " for each acceptor PID -> " + temp);
+            for (int i = 0; i < acceptorList.size(); i++) {
+                if (acceptorList.get(i) != null) {
+                    temp = acceptorList.get(i).getPID();
                     if (temp > max) {
                         max = temp;
                     }
                 }
             }
-            System.out.println(MID + "find max PID in acceptor " + max);
+
             if (max > this.proposalMSG.getPID()) {
                 System.out.println(" M" + MID + "Found larger PID in accepted MSG\n");
             } else {
                 printNice(" [ Start Learn ] ", " M" + this.MID + " has Received Majority Accepted ( "
                         + promisesReceived.size() + " )\n Send Final Agreement to all members");
-                finalValue = promisedMSG.getValue();
+                finalValue = checkByzantine();
                 finalProposalMSG = new ProposalMSG(this.MID, proposalMSG.getPID(), finalValue, "Final");
                 proposals.clear();
-                acceptors.clear();
+                acceptorList.clear();
                 finalAgreement(finalProposalMSG);  // acceptedValue
             }
         }
     }
 
-    private void receiveNah(ProposalMSG obj) throws Exception {
-        nahCount += 1;
-//        if (nahCount == majority) {
-//            System.out.println("=".repeat(40) + "\nM" + this.MID + " receives 5 nah nah nah nah nah\n" + "=".repeat(40));
-//        }
-//        sendWhatever(fromMID);
+    public Object checkByzantine() {
+        String check = "";
+        if (acceptorList.size() == 0) return null;
+        int checkedValue1 = (int) acceptorList.get(0).getValue();
+        Object checkedValue2 = null;
+        int countValue1 = 0;
+        int countValue2 = 0;
+
+        for (int i = 0; i < acceptorList.size(); i++) {
+            check += acceptorList.get(i).getValue() + "\n";
+            int temp = (int) acceptorList.get(i).getValue();
+            if (temp == checkedValue1) {
+                countValue1++;
+            } else {
+                checkedValue2 = acceptorList.get(i).getValue();
+                countValue2++;
+            }
+        }
+
+        if (countValue1 > countValue2) {
+            printNice(" [ Check Byzantine Traitor ] ", check + "Final value is decided: " + checkedValue1);
+            return checkedValue1;
+        } else {
+            printNice(" [ Check Byzantine Traitor ] ", check + "Final value : " + checkedValue2);
+            return checkedValue2;
+        }
     }
 
-    private void sendWhatever(int toMID) {
-        System.out.println(">> M" + this.MID + " say Whatever ~ Whatever ~ Whatever ~ to M" + toMID);
-        ProposalMSG whatever = new ProposalMSG(this.MID, -1, null, "Whatever");
-        outMSG(toMID, whatever);
-    }
-
-    private void receiveWhatever(ProposalMSG inObject) {
-        System.out.println("in receiver whatever (todo)");
+    private void receiveCheck(ProposalMSG inObject) {
+        checkByzantine();
     }
 
     private void finalAgreement(ProposalMSG proposalMSG) throws Exception {
         System.out.println("\n******** Agreement on Final value -> " + proposalMSG.getProposalMSG() + "********\n");
         broadcast(proposalMSG, "Final");
-//        finalResultOutput();
     }
 
     protected void receiveFinal(ProposalMSG inObject) throws IOException {
         if (isDone) return;
-//        System.out.println(">> Final :: M" + MID + " receive Final Message ( Save data to local file )");
-        saveToLocalData(inObject.getValue());
-        finalResult();
+        if (inObject.getValue() != null)
+            saveToLocalData((int) inObject.getValue());
+//        finalResult();
         isDone = true;
-        server.close(); // todo stop socket?
+        cleanCloseSocket();
     }
 
     // final value
@@ -350,7 +352,6 @@ public class MemberFast extends Communication {
                     + " has Received Majority Promises ( " + promisesReceived.size() + " )\n Send Accept Request "
                     + proposalMSG.getProposalMSG() + " to all members");
         }
-
         for (int i = 1; i <= 9; i++) {
             outMSG(i, toSendMSG);
         }
@@ -369,7 +370,7 @@ public class MemberFast extends Communication {
                 socket = null;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error in clean close Socket");
         }
     }
 
@@ -382,8 +383,8 @@ public class MemberFast extends Communication {
         }
     }
 
-    private void saveToLocalData(Object content) {
-        String toWriteData = content.toString();
+    private void saveToLocalData(int content) {
+        String toWriteData = String.valueOf(content);
         FileWriter writer;
         try {
             writer = new FileWriter(backupPath);
@@ -392,7 +393,6 @@ public class MemberFast extends Communication {
             writer.close();
         } catch (IOException e) {
             System.out.println("Error in save to local Data. Please Check connection of M" + this.MID);
-            e.printStackTrace();
         }
     }
 
@@ -404,7 +404,6 @@ public class MemberFast extends Communication {
         } else if (file.exists() && file.length() == 0) {
 //            System.out.println("Reading... Local File is EMPTY.");
         } else if (file.exists() && file.length() != 0) {
-//            System.out.println("Reading Proposal from local file " + FILE_TO_RECOVER);
             content = "";
             BufferedReader br = new BufferedReader(new FileReader(file));
             String line = br.readLine();
@@ -417,14 +416,6 @@ public class MemberFast extends Communication {
         return content;
     }
 
-    public void finalResult() throws IOException {
-        String content = readLocalData(this.MID + "data.txt");
-        if (content.isEmpty()) {
-            content = "N/A    ( Possible lost connection with this member )\n";
-        }
-        System.out.println(">> [ Paxos End ] Data saved in M" + this.MID + ": " + content);
-    }
-
     public void finalResultOutput() throws IOException {
         String output = "";
         LinkedList<String> check = new LinkedList<>();
@@ -434,7 +425,8 @@ public class MemberFast extends Communication {
                 check.add(content);
                 output += "Data saved in M" + i + ": " + content;
             } else {
-                output += "Data saved in M" + i + ": N/A    ( Possible lost connection with this member )\n";
+                output += "Data saved in M" + i + ": N/A ( Possibly offline. Please check" +
+                        " member response status at the beginning )\n";
             }
         }
         if (checkPaxosResults(check)) {

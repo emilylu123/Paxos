@@ -75,7 +75,7 @@ public class Election {
     // randomly choose M2 or M3 going offline
     protected void goOffline() {
         int id = new Random().nextInt(2) + 2;
-        System.out.println(">> Offline Warning :: M" + id + " will be offline after proposal");
+        System.out.println(">> Offline:: M" + id + " will go offline after proposal ( Offline Warning!)");
         if (id == 2) {
             M2.isOffline = true;
             M2.randomResponse = 3;
@@ -87,7 +87,7 @@ public class Election {
 
     // isAll define if random response setting include M2 and M3
     protected void doRandom(boolean isAll) {
-        if (isAll){
+        if (isAll) {
             random(M2);
             random(M3);
         }
@@ -99,45 +99,32 @@ public class Election {
         random(M9);
     }
 
-/*   random a integer between 0 - 5,
-     the possibility of late response and never response are both 1/6
-     the possibility of immediately response and medium response are both 1/3
-     so that the random test is less likely to have majority (5) failures.
-     */
+    /*   random a integer between 0 - 5,
+         the possibility of late response and never response are both 1/6
+         the possibility of immediately response and medium response are both 1/3
+         so that the random test is less likely to have majority (5) failures.
+         */
     protected void random(Member member) {
         int random = new Random().nextInt(6);
         switch (random) {
             case 0:
             case 1:
                 member.randomResponse = 0;
-                System.out.println(">> Random:: M" + member.MID + " - immediately response " + random);
+                System.out.println(">> Random response :: M" + member.MID + " - immediately");
                 break;
             case 2:
             case 3:
                 member.randomResponse = 1;
-                System.out.println(">> Random:: M" + member.MID + " - medium response " + random);
+                System.out.println(">> Random response :: M" + member.MID + " - medium");
                 break;
             case 4:
                 member.randomResponse = 2;
-                System.out.println(">> Random:: M" + member.MID + " - late response " + random);
+                System.out.println(">> Random response :: M" + member.MID + " - late");
                 break;
             default:
                 member.randomResponse = 3;
-                System.out.println(">> Random:: M" + member.MID + " - never response " + random);
+                System.out.println(">> Random response :: M" + member.MID + " - never ( Offline Warning!)");
                 break;
-        }
-    }
-
-    // bonus function
-    protected void doByzantine() {
-        System.out.println("Under construction...");
-    }
-
-    // bonus function
-    public void setFastPaxos(){
-        System.out.println("Under construction...");
-        for (Member member : council) {
-
         }
     }
 }

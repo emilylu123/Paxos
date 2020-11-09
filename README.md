@@ -1,12 +1,11 @@
 # Paxos
-//====================================
+
 // Distributed System
 // Name: Yingyao Lu
 // ID: a1784870
 // Semester: S2
 // Year: 2020
 // Assignment3: Paxos
-//=====================================
 
 This project demonstrates that how to implement consensus and voting protocols in the presence of failures of one or more of the participants.
 

@@ -7,6 +7,8 @@
 // Assignment3: Paxos
 //=====================================
 
+import java.util.Date;
+
 public class TesterClassicNormal extends Election {
     public static void main(String[] args) {
         System.out.println("============= [ Test Description ] ===================");
@@ -15,10 +17,14 @@ public class TesterClassicNormal extends Election {
         System.out.println("2. Acceptor: All members response immediately.");
         System.out.println("======================================================\n");
 
+
         Election test = new Election();
+
         test.start();
         test.propose(M1);
         test.propose(M2);
         test.propose(M3);
+//        test.propose(M4);
+//        test.propose(M5);
     }
 }

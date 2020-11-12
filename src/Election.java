@@ -10,14 +10,17 @@
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Random;
 
 public class Election {
+    long startTime = new Date().getTime();
     protected static Member M1, M2, M3, M4, M5, M6, M7, M8, M9;
     protected static ArrayList<Member> council = new ArrayList<>();
 
     // Start all servers
     public void start() {
+//        System.out.println("Start Time : " + startTime);
         cleanUp();  // delete backup files
         createMembers();
         startElection();
@@ -34,6 +37,7 @@ public class Election {
         M7 = new Member(7);
         M8 = new Member(8);
         M9 = new Member(9);
+        M1.startTime = startTime;
         council.addAll(Arrays.asList(M1, M2, M3, M4, M5, M6, M7, M8, M9));
     }
 
@@ -90,13 +94,23 @@ public class Election {
         if (isAll) {
             random(M2);
             random(M3);
+        } else {
+            M2.randomResponse = 1;
+            M3.randomResponse = 1;
         }
-        random(M4);
-        random(M5);
-        random(M6);
-        random(M7);
-        random(M8);
-        random(M9);
+//        random(M4);
+//        random(M5);
+//        random(M6);
+//        random(M7);
+//        random(M8);
+//        random(M9);
+//        M4.randomResponse= 1;
+        M5.randomResponse= 1;
+        M6.randomResponse= 1;
+        M7.randomResponse= 2;
+//        M8.randomResponse= 0;
+//        M9.randomResponse= 3;
+
     }
 
     /*   random a integer between 0 - 5,

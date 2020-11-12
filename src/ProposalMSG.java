@@ -17,6 +17,7 @@ public class ProposalMSG implements Serializable {
     private Object value;
     private String type = "";
 
+
     public ProposalMSG(int MID) {
         this.MID = MID;
         this.PID = 0;  // set PID = 0 when first new Proposal
@@ -32,7 +33,7 @@ public class ProposalMSG implements Serializable {
 
     // M1-M3 will always vote for them self, and M4-M9 randomly vote from [M1, M2, M3]
     public void createVotingValue() {
-        if (this.MID <= 3) this.value = MID;  // M1 M2 M3 always vote for itself
+        if (this.MID <= 4) this.value = MID;  // M1 M2 M3 always vote for itself
         else this.value = new Random().nextInt(3) + 1;
     }
 

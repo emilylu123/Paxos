@@ -21,6 +21,6 @@ public class TesterBonusRandom extends Election {
         test.propose(M3);
 
         // allow M4-M9 to have random response time
-        test.doRandom(true);
+        test.doRandom(false);
     }
 }

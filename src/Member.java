@@ -10,10 +10,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class Member extends Communication {
     protected final int majority = 9 / 2 + 1;
@@ -37,6 +34,8 @@ public class Member extends Communication {
     protected boolean isOffline = false;   // to simulate M2 M3 random go offline
     protected boolean isDone = false;
     protected int randomResponse = 0;
+    public long startTime;
+
 
     // M1, M2, M3 will proposal for themselves, M4-M9 will randomly choose one from M1-M3 as proposal value
     Member(int MID) {
@@ -67,7 +66,7 @@ public class Member extends Communication {
                 }
                 // immediate;  medium; late; never
                 if (randomResponse == 1) {  // medium response
-                    Thread.sleep(1000);
+                    Thread.sleep(1500);
                 } else if (randomResponse == 2) { // late response
                     Thread.sleep(3000);
                 } else if (randomResponse != 0) { // never response
@@ -78,6 +77,7 @@ public class Member extends Communication {
                 accept(socket);
             } while (!isDone);
             if (this.MID == 1 || this.randomResponse == 1 || this.randomResponse == 2)
+//            if (this.MID == 1)
                 finalResultOutput();
         } catch (Exception e) {
             System.out.println("Error in Server Socket connection for M" + this.MID);
@@ -397,10 +397,12 @@ public class Member extends Communication {
                         " member response status at the beginning )\n";
             }
         }
+
         if (checkPaxosResults(check)) {
-            printNice(" M" + MID + " :: Output: ", "Test Result : << PASS >>\n\n" + output);
+            printNice(" M" + MID + " :: Output: ",
+                    "Test Result : << PASS >>\n\n" + output + "End Time: " + (new Date().getTime()-startTime));
         } else
-            printNice(" M" + MID + " :: Output: ", "Test Result : << FAIL >>\n\n" + output);
+            printNice(" M" + MID + " :: Output: ", "Test Result : << FAIL >>\n\n" + output+ "End Time: " + (new Date().getTime()-startTime));
     }
 
     public boolean checkPaxosResults(LinkedList<String> check) {

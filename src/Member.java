@@ -13,7 +13,8 @@ import java.net.Socket;
 import java.util.*;
 
 public class Member extends Communication {
-    protected final int majority = 9 / 2 + 1;
+    protected int nodes;
+    protected int majority;
     protected int MID; //memberID 1-9
     protected ProposalMSG proposalMSG; //p
     protected int lastPromisedPID = -1; //p
@@ -312,7 +313,7 @@ public class Member extends Communication {
                     + " has Received Majority Promises ( " + promisesReceived.size() + " )\n Send Accept Request "
                     + proposalMSG.getProposalMSG() + " to all members");
         }
-        for (int i = 1; i <= 9; i++) {
+        for (int i = 1; i <= nodes; i++) {
             outMSG(i, toSendMSG);
         }
     }
@@ -387,7 +388,7 @@ public class Member extends Communication {
     public void finalResultOutput() throws IOException {
         String output = "";
         LinkedList<String> check = new LinkedList<>();
-        for (int i = 1; i <= 9; i++) {
+        for (int i = 1; i <= nodes; i++) {
             String content = readLocalData(i + "data.txt");
             if (!content.isEmpty()) {
                 check.add(content);

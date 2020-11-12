@@ -15,19 +15,18 @@ import java.util.Random;
 
 public class Election {
     long startTime = new Date().getTime();
-    protected static Member M1, M2, M3, M4, M5, M6, M7, M8, M9;
+    protected static Member M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13;
     protected static ArrayList<Member> council = new ArrayList<>();
 
     // Start all servers
-    public void start() {
-//        System.out.println("Start Time : " + startTime);
+    public void start(boolean ismoreMembers) {
         cleanUp();  // delete backup files
-        createMembers();
+        createMembers(ismoreMembers);
         startElection();
     }
 
     // Create M1 - M9
-    public void createMembers() {
+    public void createMembers(boolean ismoreMembers) {
         M1 = new Member(1);
         M2 = new Member(2);
         M3 = new Member(3);
@@ -37,8 +36,22 @@ public class Election {
         M7 = new Member(7);
         M8 = new Member(8);
         M9 = new Member(9);
-        M1.startTime = startTime;
+//        M1.startTime = startTime;
         council.addAll(Arrays.asList(M1, M2, M3, M4, M5, M6, M7, M8, M9));
+
+        if (ismoreMembers){
+            M10 = new Member(10);
+            M11 = new Member(11);
+            M12 = new Member(12);
+            M13 = new Member(13);
+            council.addAll(Arrays.asList(M10,M11,M12,M13));
+        }
+
+        for (Member member : council) {
+            member.startTime = startTime;
+            member.nodes = council.size();
+            member.majority = council.size() / 2 + 1;
+        }
     }
 
     //Create a legal Election Council with 9 members

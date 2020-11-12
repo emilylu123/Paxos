@@ -15,7 +15,7 @@ public class TesterBonusRandom extends Election {
         System.out.println("2. Acceptor: M2 - M9 has random response time: immediate; medium; late; never.");
         System.out.println("======================================================\n");
         Election test = new Election();
-        test.start();
+        test.start(true);
         test.propose(M1);
         test.propose(M2);
         test.propose(M3);

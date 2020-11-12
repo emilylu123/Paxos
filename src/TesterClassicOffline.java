@@ -17,7 +17,7 @@ public class TesterClassicOffline extends Election {
         System.out.println("======================================================\n");
 
         Election test = new Election();
-        test.start();
+        test.start(false);
         test.propose(M1);
         test.propose(M2);
         test.propose(M3);

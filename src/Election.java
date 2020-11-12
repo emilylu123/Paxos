@@ -103,27 +103,15 @@ public class Election {
     }
 
     // isAll define if random response setting include M2 and M3
-    protected void doRandom(boolean isAll) {
-        if (isAll) {
-            random(M2);
-            random(M3);
-        } else {
-            M2.randomResponse = 1;
-            M3.randomResponse = 1;
-        }
-//        random(M4);
-//        random(M5);
-//        random(M6);
-//        random(M7);
-//        random(M8);
-//        random(M9);
-//        M4.randomResponse= 1;
-        M5.randomResponse= 1;
-        M6.randomResponse= 1;
-        M7.randomResponse= 2;
-//        M8.randomResponse= 0;
-//        M9.randomResponse= 3;
-
+    protected void doRandom() {
+//        M2.randomResponse = 1;
+//        M3.randomResponse = 1;
+//        M4.randomResponse = 1;
+        M5.randomResponse = 1;
+        M6.randomResponse = 1;
+        M7.randomResponse = 1;
+        M8.randomResponse = 1;
+        M9.randomResponse = 1;
     }
 
     /*   random a integer between 0 - 5,

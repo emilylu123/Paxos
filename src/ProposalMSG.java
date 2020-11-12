@@ -33,8 +33,9 @@ public class ProposalMSG implements Serializable {
 
     // M1-M3 will always vote for them self, and M4-M9 randomly vote from [M1, M2, M3]
     public void createVotingValue() {
-        if (this.MID <= 4) this.value = MID;  // M1 M2 M3 always vote for itself
-        else this.value = new Random().nextInt(3) + 1;
+//        if (this.MID <= 4)
+            this.value = MID;  // M1 M2 M3 always vote for itself
+//        else this.value = new Random().nextInt(3) + 1;
     }
 
     // generate unique PID = current time stamp (7th digits ~ end) + 1 digit of random number +MemberID

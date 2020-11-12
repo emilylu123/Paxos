@@ -15,7 +15,8 @@ public class Communication {
     protected static final int MAX_TRY = 3;
     protected static final String host = "0.0.0.0";
 
-    public static Socket getSocket(int toMID) throws Exception {
+    public static Socket getSocket(int toMID, Object outOBJ) throws Exception {
+        ProposalMSG pid = (ProposalMSG) outOBJ;
         Socket socket = null;
         int acceptorIP = toMID * 1111;
         int count_try = 0;
@@ -27,7 +28,7 @@ public class Communication {
                 break;
             } catch (Exception e) {
                 if (toMID != 1)
-                    System.out.println(">> Connection to M" + toMID + " failed. Will retry in 1s. Retry " + count_try);
+                    System.out.println(">>" + pid + " Connection to M" + toMID + " failed. Will retry in 1s. Retry " + count_try);
                 Thread.sleep(1000);
             }
         }
@@ -37,7 +38,7 @@ public class Communication {
     public static String outMSG(int toMID, Object outOBJ) {
         ProposalMSG pid = (ProposalMSG) outOBJ;
         try {
-            Socket socket = getSocket(toMID);
+            Socket socket = getSocket(toMID,outOBJ);
             if (socket != null && socket.isConnected()) {
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 oos.writeObject(outOBJ);

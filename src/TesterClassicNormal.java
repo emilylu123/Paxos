@@ -19,11 +19,11 @@ public class TesterClassicNormal extends Election {
 
         Election test = new Election();
 
-        test.start(true);   // true will test 13 nodes, false will test 9 nodes
+        test.start(false);   // true will test 13 nodes, false will test 9 nodes
         test.propose(M1);
         test.propose(M2);
         test.propose(M3);
-//        test.propose(M4);
-//        test.propose(M5);
+        test.propose(M4);
+        test.propose(M5);
     }
 }

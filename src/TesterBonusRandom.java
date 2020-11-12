@@ -15,12 +15,14 @@ public class TesterBonusRandom extends Election {
         System.out.println("2. Acceptor: M2 - M9 has random response time: immediate; medium; late; never.");
         System.out.println("======================================================\n");
         Election test = new Election();
-        test.start(true);
+        test.start(false);
         test.propose(M1);
         test.propose(M2);
         test.propose(M3);
+        test.propose(M4);
+        test.propose(M5);
 
         // allow M4-M9 to have random response time
-        test.doRandom(false);
+        test.doRandom();
     }
 }

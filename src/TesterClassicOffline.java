@@ -26,6 +26,6 @@ public class TesterClassicOffline extends Election {
         test.goOffline();
 
         //let M4-M9 have random response time
-        test.doRandom(false);
+        test.doRandom();
     }
 }

@@ -77,8 +77,8 @@ public class Member extends Communication {
                 }
                 accept(socket);
             } while (!isDone);
-            if (this.MID == 1 || this.randomResponse == 1 || this.randomResponse == 2)
-//            if (this.MID == 1)
+//            if (this.MID == 1 || this.randomResponse == 1 || this.randomResponse == 2)
+            if (this.MID == 1)
                 finalResultOutput();
         } catch (Exception e) {
             System.out.println("Error in Server Socket connection for M" + this.MID);
@@ -244,11 +244,11 @@ public class Member extends Communication {
 
         // if duplicate msg or smaller PID means outdated MSG -> ignore
         if (oldMID != null && acceptorPID <= oldMID.getPID()) return;
-        if (acceptedValue != null) {
+//        if (acceptedValue != null) {
             acceptorList.add(acceptedMSG);
             System.out.println("[ 2b ] M" + this.MID + " receive Accepted from M" + acceptedMSG.getMID() + " -> " +
                     acceptedValue + " total number - " + acceptorList.size());
-        }
+//        }
 
         if (acceptorList.size() == majority) {
             System.out.printf("\n******** M%d has received Enough Accepted (%d) !! ********\n\n", MID,
@@ -265,7 +265,9 @@ public class Member extends Communication {
                 }
             }
             if (max > this.proposalMSG.getPID()) {
-                printNice(" M" + MID + " Go back to [ Phrase 1 ] ", "Found larger PID in accepted MSG\nwill generate a new Proposal ");
+                printNice(" M" + MID + " Go back to [ Phrase 1 ] ", "( go back stage 2) Found larger PID in accepted " +
+                        "MSG\nwill " +
+                        "generate a new Proposal ");
                 prepare();
             } else {
                 printNice(" [ Start Learn ] ", " M" + this.MID + " has Received Majority Accepted ( "
@@ -283,7 +285,7 @@ public class Member extends Communication {
         nahCount += 1;
         if (nahCount == majority) {
             System.out.println("=".repeat(40) + "\nM" + this.MID + " will go back to [" +
-                    " Phrase 1 ]\nSend new prepare() with new ProposalID\n" + "=".repeat(40));
+                    " Phrase 1 ] Stage(1)\nSend new prepare() with new ProposalID\n" + "=".repeat(40));
             nahCount = 0; // reset nah count
             prepare();
         }
@@ -297,9 +299,8 @@ public class Member extends Communication {
     protected void receiveFinal(ProposalMSG inObject) throws IOException {
         if (isDone) return;
         saveToLocalData(inObject.getValue());
-//        finalResult();
         isDone = true;
-        server.close();
+//        server.close();
     }
 
     // final value

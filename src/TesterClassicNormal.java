@@ -17,7 +17,6 @@ public class TesterClassicNormal extends Election {
         System.out.println("2. Acceptor: All members response immediately.");
         System.out.println("======================================================\n");
 
-
         Election test = new Election();
 
         test.start(true);   // true will test 13 nodes, false will test 9 nodes
